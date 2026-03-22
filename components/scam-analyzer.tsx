@@ -246,8 +246,8 @@ export function ScamAnalyzer({ title, placeholder }: ScamAnalyzerProps) {
                 <Shield className="h-12 w-12 text-primary animate-pulse" />
               </div>
             </div>
-            <p className="mt-6 text-lg font-medium text-foreground">Scanning for threats...</p>
-            <p className="mt-2 text-sm text-muted-foreground">Analyzing patterns, verifying sources, checking red flags</p>
+            <p className="mt-6 text-lg font-medium text-foreground">Analyzing with AI...</p>
+            <p className="mt-2 text-sm text-muted-foreground">Scanning patterns, verifying sources, detecting red flags</p>
             <div className="mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-secondary">
               <div className="h-full w-full animate-[shimmer_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-primary to-transparent" />
             </div>
@@ -268,48 +268,46 @@ export function ScamAnalyzer({ title, placeholder }: ScamAnalyzerProps) {
             {/* Background decoration */}
             <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 translate-x-10 -translate-y-10 rounded-full bg-gradient-to-br from-white/5 to-transparent blur-2xl" />
             
-            <div className="relative">
-              {/* Risk Level Badge - Large and prominent */}
-              <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left gap-6">
-                <div className="flex flex-col items-center gap-3">
-                  {getRiskIcon(result.risk_level)}
-                  <span className={cn(
-                    "rounded-full px-5 py-2 text-lg font-bold uppercase tracking-wider",
-                    getRiskStyles(result.risk_level).badge
-                  )}>
-                    {result.risk_level} Risk
-                  </span>
+            <div className="relative space-y-6">
+              {/* Risk Level Badge - Top Center, Large and prominent */}
+              <div className="flex flex-col items-center text-center gap-4">
+                {getRiskIcon(result.risk_level)}
+                <span className={cn(
+                  "rounded-full px-6 py-2.5 text-xl font-bold uppercase tracking-wider",
+                  getRiskStyles(result.risk_level).badge
+                )}>
+                  {result.risk_level} Risk
+                </span>
+              </div>
+              
+              {/* Confidence Meter + Scam Type */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Confidence Score with Progress Bar */}
+                <div className="space-y-2 rounded-xl bg-secondary/20 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Confidence</span>
+                    <span className="text-2xl font-bold text-foreground">{result.confidence}%</span>
+                  </div>
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-secondary/50">
+                    <div 
+                      className={cn(
+                        "h-full rounded-full transition-all duration-1000 ease-out",
+                        getConfidenceColor(result.confidence)
+                      )}
+                      style={{ width: `${result.confidence}%` }}
+                    />
+                  </div>
                 </div>
                 
-                <div className="flex-1 space-y-4">
-                  {/* Scam Type Tag */}
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                    <span className="text-sm text-muted-foreground">Detected:</span>
-                    <span className={cn(
-                      "rounded-lg border px-3 py-1.5 text-sm font-semibold",
-                      getRiskStyles(result.risk_level).border,
-                      getRiskStyles(result.risk_level).text
-                    )}>
-                      {result.scam_type}
-                    </span>
-                  </div>
-                  
-                  {/* Confidence Score with Progress Bar */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">Analysis Confidence</span>
-                      <span className="text-2xl font-bold text-foreground">{result.confidence}%</span>
-                    </div>
-                    <div className="h-3 w-full overflow-hidden rounded-full bg-secondary/50">
-                      <div 
-                        className={cn(
-                          "h-full rounded-full transition-all duration-1000 ease-out",
-                          getConfidenceColor(result.confidence)
-                        )}
-                        style={{ width: `${result.confidence}%` }}
-                      />
-                    </div>
-                  </div>
+                {/* Scam Type Tag */}
+                <div className="flex flex-col justify-center rounded-xl bg-secondary/20 p-4">
+                  <span className="text-sm text-muted-foreground">Detected Type</span>
+                  <span className={cn(
+                    "mt-1 text-lg font-bold",
+                    getRiskStyles(result.risk_level).text
+                  )}>
+                    {result.scam_type}
+                  </span>
                 </div>
               </div>
             </div>
