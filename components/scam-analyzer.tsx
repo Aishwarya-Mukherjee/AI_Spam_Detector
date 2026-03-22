@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, CheckCircle, Shield, AlertCircle, ChevronDown, ChevronUp, Loader2, ShieldAlert, ShieldCheck, Link2, FileText } from "lucide-react"
+import { AlertTriangle, CheckCircle, Shield, AlertCircle, ChevronDown, Loader2, ShieldAlert, ShieldCheck, Link2, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Progress } from "@/components/ui/progress"
 
 interface AnalysisResult {
   risk_level: "High" | "Medium" | "Low"
@@ -17,44 +16,6 @@ interface AnalysisResult {
 interface ScamAnalyzerProps {
   title: string
   placeholder: string
-}
-
-const mockResponses: Record<string, AnalysisResult> = {
-  high: {
-    risk_level: "High",
-    confidence: 92,
-    scam_type: "Internship Scam",
-    red_flags: [
-      "Requests upfront payment or registration fee of $500",
-      "Uses urgency tactics like 'limited positions available - apply NOW'",
-      "No verifiable company information found online",
-      "Unrealistic salary promises: $5000/week for entry-level work",
-      "Requests personal financial information (bank details, SSN) early",
-      "Generic Gmail address instead of corporate email",
-    ],
-    keywords: ["payment", "urgency", "limited positions", "$5000/week", "bank details", "SSN", "Gmail"],
-    advice: "Do not proceed with this opportunity. Legitimate employers never ask for upfront fees or sensitive financial information during initial contact. Block the sender and report this posting to the platform.",
-  },
-  medium: {
-    risk_level: "Medium",
-    confidence: 67,
-    scam_type: "Potential Phishing",
-    red_flags: [
-      "Generic job description with vague responsibilities",
-      "Communication from personal email domain (@gmail.com)",
-      "Limited online presence of company",
-    ],
-    keywords: ["vague", "gmail.com", "limited presence"],
-    advice: "Proceed with caution. Research the company thoroughly using LinkedIn and official channels. Verify contact information independently before sharing any personal data.",
-  },
-  low: {
-    risk_level: "Low",
-    confidence: 85,
-    scam_type: "Legitimate Opportunity",
-    red_flags: [],
-    keywords: [],
-    advice: "This opportunity appears legitimate based on our analysis. Standard due diligence is still recommended - verify the company website, check employee reviews, and never share sensitive information until you've confirmed the offer.",
-  },
 }
 
 // Function to highlight keywords in red flags
@@ -76,11 +37,59 @@ function highlightKeywords(text: string, keywords: string[]): React.ReactNode {
   })
 }
 
+// Circular Risk Meter Component
+function RiskMeter({ value, riskLevel }: { value: number; riskLevel: string }) {
+  const radius = 40
+  const circumference = 2 * Math.PI * radius
+  const progress = (value / 100) * circumference
+  
+  const getColor = () => {
+    if (value >= 71) return { stroke: "#ef4444", bg: "rgba(239, 68, 68, 0.2)" }
+    if (value >= 31) return { stroke: "#f59e0b", bg: "rgba(245, 158, 11, 0.2)" }
+    return { stroke: "#10b981", bg: "rgba(16, 185, 129, 0.2)" }
+  }
+  
+  const colors = getColor()
+  
+  return (
+    <div className="relative flex items-center justify-center">
+      <svg width="100" height="100" className="transform -rotate-90">
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          stroke={colors.bg}
+          strokeWidth="8"
+          fill="none"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          stroke={colors.stroke}
+          strokeWidth="8"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference - progress}
+          className="transition-all duration-1000 ease-out"
+          style={{ filter: `drop-shadow(0 0 8px ${colors.stroke})` }}
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-2xl font-bold text-foreground">{value}%</span>
+        <span className="text-xs text-muted-foreground">Risk</span>
+      </div>
+    </div>
+  )
+}
+
 export function ScamAnalyzer({ title, placeholder }: ScamAnalyzerProps) {
   const [inputMode, setInputMode] = useState<"text" | "url">("text")
   const [inputValue, setInputValue] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [isRedFlagsExpanded, setIsRedFlagsExpanded] = useState(true)
 
   const handleAnalyze = async () => {
@@ -88,18 +97,34 @@ export function ScamAnalyzer({ title, placeholder }: ScamAnalyzerProps) {
     
     setIsAnalyzing(true)
     setResult(null)
+    setError(null)
     
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2500))
-    
-    // Determine mock response based on input length for demo
-    const inputLength = inputValue.length
-    let mockKey: keyof typeof mockResponses = "low"
-    if (inputLength > 200) mockKey = "high"
-    else if (inputLength > 50) mockKey = "medium"
-    
-    setResult(mockResponses[mockKey])
-    setIsAnalyzing(false)
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: inputValue,
+          inputType: inputMode,
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to analyze content")
+      }
+      
+      const data = await response.json()
+      console.log("[v0] API Response:", data)
+      
+      setResult(data)
+    } catch (err) {
+      console.error("[v0] Analysis error:", err)
+      setError("Failed to analyze content. Please try again.")
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const getRiskStyles = (level: string) => {
@@ -255,6 +280,25 @@ export function ScamAnalyzer({ title, placeholder }: ScamAnalyzerProps) {
         </div>
       )}
 
+      {/* Error State */}
+      {error && !isAnalyzing && (
+        <div className="animate-in fade-in duration-300">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-red-500/30 bg-red-950/20 p-8">
+            <div className="rounded-full bg-red-500/20 p-4">
+              <AlertCircle className="h-8 w-8 text-red-400" />
+            </div>
+            <p className="mt-4 text-lg font-medium text-foreground">No result found</p>
+            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+            <button
+              onClick={handleAnalyze}
+              className="mt-4 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/30 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Results */}
       {result && !isAnalyzing && (
         <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 space-y-4">
@@ -280,13 +324,18 @@ export function ScamAnalyzer({ title, placeholder }: ScamAnalyzerProps) {
                 </span>
               </div>
               
-              {/* Confidence Meter + Scam Type */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* Circular Risk Meter + Confidence + Scam Type */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                {/* Circular Risk Meter */}
+                <div className="flex items-center justify-center rounded-xl bg-secondary/20 p-4">
+                  <RiskMeter value={result.confidence} riskLevel={result.risk_level} />
+                </div>
+                
                 {/* Confidence Score with Progress Bar */}
                 <div className="space-y-2 rounded-xl bg-secondary/20 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-muted-foreground">Confidence</span>
-                    <span className="text-2xl font-bold text-foreground">{result.confidence}%</span>
+                  <span className="text-sm font-medium text-muted-foreground">Confidence Level</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-foreground">{result.confidence}%</span>
                   </div>
                   <div className="h-3 w-full overflow-hidden rounded-full bg-secondary/50">
                     <div 
