@@ -179,10 +179,10 @@ export function EmailAnalyzer() {
     const lowercaseName = filename.toLowerCase()
     
     // FIRST: Check for GUID-like filenames (Windows screenshots) - these are normal
-    // Examples: {5C2606B5-232E-4BA9-A202-7EE73D8398C3}.png
-    const guidPattern = /^\{?[a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12}\}?\./i
-    if (guidPattern.test(filename)) {
-      console.log("[v0] GUID filename detected - treating as normal")
+    // Examples: {5C2606B5-232E-4BA9-A202-7EE73D8398C3}.png, {3017C56A-30E4-4624-9E87-D6DCDCF01652}.png
+    // Match pattern: optional {, 8 hex chars, dash, 4 hex chars, dash, 4 hex chars, dash, 4 hex chars, dash, 12 hex chars, optional }
+    const isGuid = /^[\{]?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[\}]?\.[a-zA-Z]+$/i.test(filename)
+    if (isGuid) {
       return "normal"
     }
     
@@ -201,7 +201,6 @@ export function EmailAnalyzer() {
     ]
     
     if (genericScreenshotPatterns.some(pattern => pattern.test(filename))) {
-      console.log("[v0] Generic screenshot filename - treating as normal")
       return "normal"
     }
     
@@ -258,20 +257,16 @@ export function EmailAnalyzer() {
     
     // Check for scam indicators
     if (scamPatterns.some(pattern => pattern.test(lowercaseName))) {
-      console.log("[v0] Scam pattern matched in filename")
       return "scam"
     }
     
     // Check for normal content indicators
     if (normalPatterns.some(pattern => pattern.test(lowercaseName))) {
-      console.log("[v0] Normal pattern matched in filename")
       return "normal"
     }
     
     // For any other filename that doesn't match specific scam patterns,
     // default to "normal" - most screenshots are legitimate
-    // Users can always paste the text manually if needed for more accurate analysis
-    console.log("[v0] No specific pattern matched - defaulting to normal")
     return "normal"
   }
 
@@ -293,8 +288,6 @@ export function EmailAnalyzer() {
         
         // Detect content type based on filename
         const contentType = detectContentType(uploadedFile.name)
-        console.log("[v0] Uploaded filename:", uploadedFile.name)
-        console.log("[v0] Detected content type:", contentType)
         
         if (contentType === "normal") {
           // Normal screenshot - no suspicious content
