@@ -178,78 +178,101 @@ export function EmailAnalyzer() {
   const detectContentType = (filename: string): "scam" | "normal" | "unknown" => {
     const lowercaseName = filename.toLowerCase()
     
-    // Scam/spam indicators in filename
+    // FIRST: Check for GUID-like filenames (Windows screenshots) - these are normal
+    // Examples: {5C2606B5-232E-4BA9-A202-7EE73D8398C3}.png
+    const guidPattern = /^\{?[a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12}\}?\./i
+    if (guidPattern.test(filename)) {
+      console.log("[v0] GUID filename detected - treating as normal")
+      return "normal"
+    }
+    
+    // Check for generic screenshot naming patterns that are typically safe
+    // Windows: Screenshot 2024-01-01 123456.png
+    // Mac: Screen Shot 2024-01-01 at 12.34.56 PM.png  
+    // Linux: Screenshot from 2024-01-01 12-34-56.png
+    const genericScreenshotPatterns = [
+      /^screenshot.*\d{4}/i,           // Screenshot with year
+      /^screen\s*shot/i,               // Screen Shot (Mac style)
+      /^capture/i,                      // Capture
+      /^snip/i,                         // Snipping tool
+      /^clip/i,                         // Clipboard
+      /^\d{4}-\d{2}-\d{2}/,             // Date-prefixed (2024-01-01)
+      /^\d{8}_\d{6}/,                   // Timestamp (20240101_123456)
+    ]
+    
+    if (genericScreenshotPatterns.some(pattern => pattern.test(filename))) {
+      console.log("[v0] Generic screenshot filename - treating as normal")
+      return "normal"
+    }
+    
+    // Scam/spam indicators in filename - ONLY check these specific keywords
     const scamPatterns = [
-      /whatsapp/i,       // WhatsApp forwards often contain scams
-      /telegram/i,       // Telegram scam messages
-      /internship/i,     // Paid internship scams
-      /job.*offer/i,     // Job offer scams
-      /earn.*money/i,    // Money earning scams
-      /lottery/i,        // Lottery scams
-      /winner/i,         // Prize/winner scams
-      /urgent/i,         // Urgency scams
-      /payment/i,        // Payment related
-      /bank/i,           // Banking scams
-      /verify/i,         // Verification scams
-      /suspended/i,      // Account suspended scams
-      /limited.*time/i,  // Limited time offers
-      /register.*now/i,  // Registration scams
-      /opportunity/i,    // "Opportunity" scams
-      /premium/i,        // Premium scams
-      /stipend/i,        // Paid internship indicator
+      /whatsapp.*image/i,  // WhatsApp Image specifically (WhatsApp forwards)
+      /internship/i,       // Paid internship scams
+      /job.*offer/i,       // Job offer scams
+      /earn.*money/i,      // Money earning scams
+      /lottery/i,          // Lottery scams
+      /winner/i,           // Prize/winner scams
+      /stipend/i,          // Paid internship indicator
+      /registration.*fee/i, // Registration fee scams
+      /work.*from.*home/i, // Work from home scams
+      /crypto/i,           // Crypto scams
+      /investment/i,       // Investment scams
+      /forex/i,            // Forex scams
+      /mlm/i,              // MLM scams
     ]
     
     // Normal/legitimate content indicators
     const normalPatterns = [
-      /^IMG_/i,          // Camera photos
-      /^DSC/i,           // DSLR photos
-      /^DCIM/i,          // Camera folder
-      /^Photo/i,         // Generic photos
-      /^PXL_/i,          // Pixel phone
+      /^IMG_/i,            // Camera photos
+      /^DSC/i,             // DSLR photos
+      /^DCIM/i,            // Camera folder
+      /^Photo/i,           // Generic photos
+      /^PXL_/i,            // Pixel phone
       /selfie/i,
       /vacation/i,
       /family/i,
       /pet|dog|cat/i,
       /food|dinner|lunch/i,
       /sunset|beach|mountain/i,
-      /microsoft/i,      // Legitimate company pages
-      /google/i,         // Google pages
-      /amazon/i,         // Amazon pages
-      /facebook/i,       // Facebook pages
-      /instagram/i,      // Instagram pages
-      /twitter|x\.com/i, // Twitter/X pages
-      /linkedin/i,       // LinkedIn pages
-      /youtube/i,        // YouTube pages
-      /browser/i,        // Browser screenshots
-      /desktop/i,        // Desktop screenshots
-      /home.*page/i,     // Homepage screenshots
-      /news/i,           // News screenshots
-      /weather/i,        // Weather screenshots
-      /msn/i,            // MSN pages
-      /bing/i,           // Bing pages
-      /edge/i,           // Edge browser
-      /chrome/i,         // Chrome browser
-      /firefox/i,        // Firefox browser
-      /safari/i,         // Safari browser
+      /microsoft/i,        // Legitimate company pages
+      /google/i,           // Google pages
+      /amazon/i,           // Amazon pages
+      /facebook/i,         // Facebook pages
+      /instagram/i,        // Instagram pages
+      /twitter|x\.com/i,   // Twitter/X pages
+      /linkedin/i,         // LinkedIn pages
+      /youtube/i,          // YouTube pages
+      /browser/i,          // Browser screenshots
+      /desktop/i,          // Desktop screenshots
+      /home.*page/i,       // Homepage screenshots
+      /news/i,             // News screenshots
+      /weather/i,          // Weather screenshots
+      /msn/i,              // MSN pages
+      /bing/i,             // Bing pages
+      /edge/i,             // Edge browser
+      /chrome/i,           // Chrome browser
+      /firefox/i,          // Firefox browser
+      /safari/i,           // Safari browser
     ]
     
-    // Check for scam indicators first
+    // Check for scam indicators
     if (scamPatterns.some(pattern => pattern.test(lowercaseName))) {
+      console.log("[v0] Scam pattern matched in filename")
       return "scam"
     }
     
     // Check for normal content indicators
     if (normalPatterns.some(pattern => pattern.test(lowercaseName))) {
+      console.log("[v0] Normal pattern matched in filename")
       return "normal"
     }
     
-    // For GUID-like filenames (like {5C2606B5-232E-4BA9-A202-7EE73D8398C3}.png), 
-    // these are typically Windows screenshots - analyze as unknown/neutral
-    if (/^\{?[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}?\./i.test(lowercaseName)) {
-      return "normal" // Windows screenshot naming - usually legitimate
-    }
-    
-    return "unknown"
+    // For any other filename that doesn't match specific scam patterns,
+    // default to "normal" - most screenshots are legitimate
+    // Users can always paste the text manually if needed for more accurate analysis
+    console.log("[v0] No specific pattern matched - defaulting to normal")
+    return "normal"
   }
 
   const handleAnalyze = async () => {
@@ -270,6 +293,8 @@ export function EmailAnalyzer() {
         
         // Detect content type based on filename
         const contentType = detectContentType(uploadedFile.name)
+        console.log("[v0] Uploaded filename:", uploadedFile.name)
+        console.log("[v0] Detected content type:", contentType)
         
         if (contentType === "normal") {
           // Normal screenshot - no suspicious content
@@ -288,7 +313,7 @@ export function EmailAnalyzer() {
           })
           setIsAnalyzing(false)
           return
-        } else if (contentType === "scam") {
+        } else {
           // Scam-related screenshot - simulate finding suspicious content
           contentToAnalyze = `[OCR Extracted from ${uploadedFile.name}] 
             PREMIUM INTERNSHIP OPPORTUNITY! Limited Seats Available!
@@ -298,29 +323,6 @@ export function EmailAnalyzer() {
             Contact HR on WhatsApp: 98765 43210
             Scan QR code to register immediately.
             This offer expires in 24 hours - ACT NOW!`
-        } else {
-          // Unknown - use generic content and let API analyze
-          contentToAnalyze = `[Image uploaded: ${uploadedFile.name}] General screenshot analysis requested.`
-          
-          // For unknown content, return a medium risk requiring manual review
-          setResult({
-            risk_level: "Medium",
-            confidence: 60,
-            scam_type: "Requires Manual Review",
-            red_flags: [
-              "Unable to automatically determine content type",
-              "Please paste the text from this image for accurate analysis",
-            ],
-            keywords: [],
-            advice: "We couldn't automatically extract clear text from this image. For best results, please paste the actual text content from the screenshot in the 'Paste Email' tab, or upload a clearer screenshot with visible text.",
-            highlights: {
-              suspicious_phrases: [],
-              unknown_sender: false,
-              link_mismatch: false,
-            },
-          })
-          setIsAnalyzing(false)
-          return
         }
       }
       
