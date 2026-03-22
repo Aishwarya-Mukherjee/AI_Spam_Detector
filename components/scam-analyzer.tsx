@@ -37,16 +37,40 @@ function highlightKeywords(text: string, keywords: string[]): React.ReactNode {
   })
 }
 
-// Circular Risk Meter Component
-function RiskMeter({ value, riskLevel }: { value: number; riskLevel: string }) {
+// Circular Risk Meter Component - Shows risk level based on actual risk, not confidence
+function RiskMeter({ riskLevel, confidence }: { riskLevel: string; confidence: number }) {
   const radius = 40
   const circumference = 2 * Math.PI * radius
-  const progress = (value / 100) * circumference
+  
+  // Calculate display value based on risk level
+  // High risk = 85-100%, Medium = 40-60%, Low = 5-20%
+  const getRiskValue = () => {
+    switch (riskLevel) {
+      case "High":
+        return Math.min(100, 80 + (confidence * 0.2))
+      case "Medium":
+        return 40 + (confidence * 0.2)
+      case "Low":
+        return Math.max(5, 20 - (confidence * 0.15))
+      default:
+        return 50
+    }
+  }
+  
+  const displayValue = Math.round(getRiskValue())
+  const progress = (displayValue / 100) * circumference
   
   const getColor = () => {
-    if (value >= 71) return { stroke: "#ef4444", bg: "rgba(239, 68, 68, 0.2)" }
-    if (value >= 31) return { stroke: "#f59e0b", bg: "rgba(245, 158, 11, 0.2)" }
-    return { stroke: "#10b981", bg: "rgba(16, 185, 129, 0.2)" }
+    switch (riskLevel) {
+      case "High":
+        return { stroke: "#ef4444", bg: "rgba(239, 68, 68, 0.2)" }
+      case "Medium":
+        return { stroke: "#f59e0b", bg: "rgba(245, 158, 11, 0.2)" }
+      case "Low":
+        return { stroke: "#10b981", bg: "rgba(16, 185, 129, 0.2)" }
+      default:
+        return { stroke: "#6b7280", bg: "rgba(107, 114, 128, 0.2)" }
+    }
   }
   
   const colors = getColor()
@@ -77,7 +101,7 @@ function RiskMeter({ value, riskLevel }: { value: number; riskLevel: string }) {
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-2xl font-bold text-foreground">{value}%</span>
+        <span className="text-2xl font-bold text-foreground">{displayValue}%</span>
         <span className="text-xs text-muted-foreground">Risk</span>
       </div>
     </div>
@@ -328,7 +352,7 @@ export function ScamAnalyzer({ title, placeholder }: ScamAnalyzerProps) {
               <div className="grid gap-4 sm:grid-cols-3">
                 {/* Circular Risk Meter */}
                 <div className="flex items-center justify-center rounded-xl bg-secondary/20 p-4">
-                  <RiskMeter value={result.confidence} riskLevel={result.risk_level} />
+                  <RiskMeter riskLevel={result.risk_level} confidence={result.confidence} />
                 </div>
                 
                 {/* Confidence Score with Progress Bar */}
