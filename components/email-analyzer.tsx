@@ -174,97 +174,6 @@ export function EmailAnalyzer() {
     setResult(null)
   }
 
-  // Detect if filename indicates a scam-related screenshot
-  const detectContentType = (filename: string): "scam" | "normal" | "unknown" => {
-    const lowercaseName = filename.toLowerCase()
-    
-    // FIRST: Check for GUID-like filenames (Windows screenshots) - these are normal
-    // Examples: {5C2606B5-232E-4BA9-A202-7EE73D8398C3}.png, {3017C56A-30E4-4624-9E87-D6DCDCF01652}.png
-    // Match pattern: optional {, 8 hex chars, dash, 4 hex chars, dash, 4 hex chars, dash, 4 hex chars, dash, 12 hex chars, optional }
-    const isGuid = /^[\{]?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[\}]?\.[a-zA-Z]+$/i.test(filename)
-    if (isGuid) {
-      return "normal"
-    }
-    
-    // Check for generic screenshot naming patterns that are typically safe
-    // Windows: Screenshot 2024-01-01 123456.png
-    // Mac: Screen Shot 2024-01-01 at 12.34.56 PM.png  
-    // Linux: Screenshot from 2024-01-01 12-34-56.png
-    const genericScreenshotPatterns = [
-      /^screenshot.*\d{4}/i,           // Screenshot with year
-      /^screen\s*shot/i,               // Screen Shot (Mac style)
-      /^capture/i,                      // Capture
-      /^snip/i,                         // Snipping tool
-      /^clip/i,                         // Clipboard
-      /^\d{4}-\d{2}-\d{2}/,             // Date-prefixed (2024-01-01)
-      /^\d{8}_\d{6}/,                   // Timestamp (20240101_123456)
-    ]
-    
-    if (genericScreenshotPatterns.some(pattern => pattern.test(filename))) {
-      return "normal"
-    }
-    
-    // Scam/spam indicators in filename - ONLY flag if filename explicitly contains scam keywords
-    // Note: We removed "whatsapp" because WhatsApp is just a messaging platform
-    // and people share all kinds of legitimate screenshots via WhatsApp
-    const scamPatterns = [
-      /scam/i,              // Explicitly labeled as scam
-      /phishing/i,          // Phishing content
-      /fraud/i,             // Fraud content
-      /fake.*job/i,         // Fake job
-      /fake.*internship/i,  // Fake internship
-      /spam/i,              // Spam content
-    ]
-    
-    // Normal/legitimate content indicators
-    const normalPatterns = [
-      /^IMG_/i,            // Camera photos
-      /^DSC/i,             // DSLR photos
-      /^DCIM/i,            // Camera folder
-      /^Photo/i,           // Generic photos
-      /^PXL_/i,            // Pixel phone
-      /selfie/i,
-      /vacation/i,
-      /family/i,
-      /pet|dog|cat/i,
-      /food|dinner|lunch/i,
-      /sunset|beach|mountain/i,
-      /microsoft/i,        // Legitimate company pages
-      /google/i,           // Google pages
-      /amazon/i,           // Amazon pages
-      /facebook/i,         // Facebook pages
-      /instagram/i,        // Instagram pages
-      /twitter|x\.com/i,   // Twitter/X pages
-      /linkedin/i,         // LinkedIn pages
-      /youtube/i,          // YouTube pages
-      /browser/i,          // Browser screenshots
-      /desktop/i,          // Desktop screenshots
-      /home.*page/i,       // Homepage screenshots
-      /news/i,             // News screenshots
-      /weather/i,          // Weather screenshots
-      /msn/i,              // MSN pages
-      /bing/i,             // Bing pages
-      /edge/i,             // Edge browser
-      /chrome/i,           // Chrome browser
-      /firefox/i,          // Firefox browser
-      /safari/i,           // Safari browser
-    ]
-    
-    // Check for scam indicators
-    if (scamPatterns.some(pattern => pattern.test(lowercaseName))) {
-      return "scam"
-    }
-    
-    // Check for normal content indicators
-    if (normalPatterns.some(pattern => pattern.test(lowercaseName))) {
-      return "normal"
-    }
-    
-    // For any other filename that doesn't match specific scam patterns,
-    // default to "normal" - most screenshots are legitimate
-    return "normal"
-  }
-
   const handleAnalyze = async () => {
     if (inputMode === "upload" && !uploadedFile) return
     if (inputMode === "email" && !emailContent.trim()) return
@@ -278,40 +187,29 @@ export function EmailAnalyzer() {
       let contentToAnalyze = emailContent
       
       if (inputMode === "upload" && uploadedFile) {
-        // Simulate OCR extraction delay
+        // Simulate processing delay
         await new Promise((resolve) => setTimeout(resolve, 1500))
         
-        // Detect content type based on filename
-        const contentType = detectContentType(uploadedFile.name)
-        
-        if (contentType === "normal") {
-          // Normal screenshot - no suspicious content
-          setResult({
-            risk_level: "Low",
-            confidence: 92,
-            scam_type: "Legitimate Content",
-            red_flags: [],
-            keywords: [],
-            advice: "This appears to be a legitimate screenshot or image. No suspicious text, phishing content, or scam indicators were detected. The content shows normal website/app usage with no red flags.",
-            highlights: {
-              suspicious_phrases: [],
-              unknown_sender: false,
-              link_mismatch: false,
-            },
-          })
-          setIsAnalyzing(false)
-          return
-        } else {
-          // Scam-related screenshot - simulate finding suspicious content
-          contentToAnalyze = `[OCR Extracted from ${uploadedFile.name}] 
-            PREMIUM INTERNSHIP OPPORTUNITY! Limited Seats Available!
-            Stipend: Rs 15,000/month - No Interview Required!
-            Certificate & Job Offer Guaranteed!
-            REGISTER NOW! To secure your spot, pay a refundable registration fee of Rs 499.
-            Contact HR on WhatsApp: 98765 43210
-            Scan QR code to register immediately.
-            This offer expires in 24 hours - ACT NOW!`
-        }
+        // Since we cannot perform actual OCR on images, we need to inform the user
+        // to paste the text content for accurate analysis
+        setResult({
+          risk_level: "Medium",
+          confidence: 50,
+          scam_type: "Manual Review Required",
+          red_flags: [
+            "Image uploaded - text content cannot be automatically extracted",
+            "For accurate scam detection, please paste the text from this screenshot",
+          ],
+          keywords: [],
+          advice: "We received your screenshot but cannot automatically read text from images. For accurate analysis, please switch to the 'Paste Email' tab and copy-paste the text content from your screenshot. This will allow our AI to properly detect scam indicators like registration fees, urgency tactics, and suspicious contact information.",
+          highlights: {
+            suspicious_phrases: [],
+            unknown_sender: false,
+            link_mismatch: false,
+          },
+        })
+        setIsAnalyzing(false)
+        return
       }
       
       const response = await fetch("/api/analyze", {
