@@ -204,21 +204,16 @@ export function EmailAnalyzer() {
       return "normal"
     }
     
-    // Scam/spam indicators in filename - ONLY check these specific keywords
+    // Scam/spam indicators in filename - ONLY flag if filename explicitly contains scam keywords
+    // Note: We removed "whatsapp" because WhatsApp is just a messaging platform
+    // and people share all kinds of legitimate screenshots via WhatsApp
     const scamPatterns = [
-      /whatsapp.*image/i,  // WhatsApp Image specifically (WhatsApp forwards)
-      /internship/i,       // Paid internship scams
-      /job.*offer/i,       // Job offer scams
-      /earn.*money/i,      // Money earning scams
-      /lottery/i,          // Lottery scams
-      /winner/i,           // Prize/winner scams
-      /stipend/i,          // Paid internship indicator
-      /registration.*fee/i, // Registration fee scams
-      /work.*from.*home/i, // Work from home scams
-      /crypto/i,           // Crypto scams
-      /investment/i,       // Investment scams
-      /forex/i,            // Forex scams
-      /mlm/i,              // MLM scams
+      /scam/i,              // Explicitly labeled as scam
+      /phishing/i,          // Phishing content
+      /fraud/i,             // Fraud content
+      /fake.*job/i,         // Fake job
+      /fake.*internship/i,  // Fake internship
+      /spam/i,              // Spam content
     ]
     
     // Normal/legitimate content indicators
