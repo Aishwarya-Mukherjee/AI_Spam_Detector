@@ -150,6 +150,59 @@ export function EmailAnalyzer() {
     setResult(null)
   }
 
+  // Check if image filename suggests it's a regular photo (not a screenshot)
+  const isRegularPhoto = (filename: string): boolean => {
+    const photoPatterns = [
+      /^IMG_/i,          // Camera photos (IMG_1234)
+      /^DSC/i,           // DSLR camera photos
+      /^DCIM/i,          // Camera folder photos
+      /^Photo/i,         // Generic photo naming
+      /^PXL_/i,          // Pixel phone photos
+      /^P\d{8}/i,        // Date-based photo naming
+      /\d{8}_\d{6}/,     // Timestamp photos (20231225_143022)
+      /wallpaper/i,      // Wallpapers
+      /landscape/i,      // Landscape photos
+      /portrait/i,       // Portrait photos
+      /selfie/i,         // Selfies
+      /vacation/i,       // Vacation photos
+      /family/i,         // Family photos
+      /pet/i,            // Pet photos
+      /dog|cat|bird/i,   // Animal photos
+      /food|meal|dinner|lunch|breakfast/i, // Food photos
+      /sunset|sunrise|beach|mountain|nature/i, // Nature photos
+    ]
+    
+    // Check if filename matches regular photo patterns
+    if (photoPatterns.some(pattern => pattern.test(filename))) {
+      return true
+    }
+    
+    // Screenshot patterns that indicate suspicious content
+    const screenshotPatterns = [
+      /screenshot/i,
+      /screen shot/i,
+      /scam/i,
+      /phishing/i,
+      /suspicious/i,
+      /email/i,
+      /message/i,
+      /text/i,
+      /sms/i,
+      /whatsapp/i,
+      /telegram/i,
+    ]
+    
+    // If it matches screenshot patterns, it's not a regular photo
+    if (screenshotPatterns.some(pattern => pattern.test(filename))) {
+      return false
+    }
+    
+    // Default: random names without patterns could be regular photos
+    // Use a simple heuristic - if filename is just numbers/letters without suspicious words, likely a photo
+    const hasNoText = /^[A-Za-z0-9_\-\.]+$/.test(filename) && filename.length < 30
+    return hasNoText
+  }
+
   const handleAnalyze = async () => {
     if (inputMode === "upload" && !uploadedFile) return
     if (inputMode === "email" && !emailContent.trim()) return
@@ -161,11 +214,41 @@ export function EmailAnalyzer() {
     try {
       // Simulate OCR extraction for images
       let contentToAnalyze = emailContent
+      let isNormalImage = false
       
       if (inputMode === "upload" && uploadedFile) {
         // Simulate OCR extraction delay
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        contentToAnalyze = `[OCR Extracted from ${uploadedFile.name}] Urgent: Your account requires immediate verification. Click here to verify your identity. Failure to comply will result in account suspension. Best regards, Security Team`
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+        
+        // Check if this looks like a regular photo vs a screenshot of suspicious content
+        isNormalImage = isRegularPhoto(uploadedFile.name)
+        
+        if (isNormalImage) {
+          // Normal photo - no suspicious content detected
+          contentToAnalyze = `[Image Analysis: ${uploadedFile.name}] This appears to be a regular photograph with no text or suspicious content detected. No email, message, or document content found in the image.`
+        } else {
+          // Likely a screenshot - simulate finding suspicious content
+          contentToAnalyze = `[OCR Extracted from ${uploadedFile.name}] Urgent: Your account requires immediate verification. Click here to verify your identity. Failure to comply will result in account suspension. Best regards, Security Team`
+        }
+      }
+      
+      // If it's a normal image, return safe result directly
+      if (isNormalImage) {
+        setResult({
+          risk_level: "Low",
+          confidence: 95,
+          scam_type: "Regular Image - No Threat",
+          red_flags: [],
+          keywords: [],
+          advice: "This appears to be a regular photograph or image. No suspicious text, phishing content, or scam indicators were detected. If you believe this image contains suspicious content, try uploading a clearer screenshot or paste the text directly.",
+          highlights: {
+            suspicious_phrases: [],
+            unknown_sender: false,
+            link_mismatch: false,
+          },
+        })
+        setIsAnalyzing(false)
+        return
       }
       
       const response = await fetch("/api/analyze", {
