@@ -353,6 +353,35 @@ Examples of what to paste:
             </div>
           </div>
 
+          {/* Detected Keywords Section */}
+          {result.keywords && result.keywords.length > 0 && (
+            <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-transparent p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="rounded-lg bg-amber-500/20 p-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                </div>
+                <div>
+                  <span className="font-bold text-foreground">Detected Suspicious Keywords</span>
+                  <span className="ml-2 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-sm font-semibold text-amber-400">
+                    {result.keywords.length}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">These keywords triggered our scam detection algorithm:</p>
+              <div className="flex flex-wrap gap-2">
+                {result.keywords.map((keyword, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400"
+                  >
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Email-specific Highlights */}
           {result.highlights && (result.highlights.suspicious_phrases.length > 0 || result.highlights.unknown_sender || result.highlights.link_mismatch) && (
             <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-transparent p-5">

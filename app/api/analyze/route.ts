@@ -156,8 +156,6 @@ export async function POST(request: NextRequest) {
 
     const result = analyzeContent(content.trim(), inputType || "text")
 
-    console.log("[v0] API Analysis Result:", JSON.stringify(result, null, 2))
-
     return NextResponse.json(result)
   } catch (error) {
     console.error("[v0] API Error:", error)
