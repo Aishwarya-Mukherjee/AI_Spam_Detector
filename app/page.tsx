@@ -1,21 +1,23 @@
 "use client"
 
 import { useState } from "react"
-import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon } from "lucide-react"
+import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail } from "lucide-react"
 import { ScamAnalyzer } from "@/components/scam-analyzer"
 import { RiskSummary } from "@/components/risk-summary"
 import { EmailAnalyzer } from "@/components/email-analyzer"
+import { ScreenshotAnalyzer } from "@/components/screenshot-analyzer"
 import { cn } from "@/lib/utils"
 
-type Tab = "job" | "terms" | "email" | "summary"
+type Tab = "job" | "terms" | "screenshot" | "email" | "summary"
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("job")
 
   const tabs = [
-    { id: "job" as const, label: "Job / Internship Analyzer", icon: Briefcase },
+    { id: "job" as const, label: "Job / Internship", icon: Briefcase },
     { id: "terms" as const, label: "T&C Analyzer", icon: FileText },
-    { id: "email" as const, label: "Screenshot / Email Analyzer", icon: ImageIcon },
+    { id: "screenshot" as const, label: "Screenshot", icon: ImageIcon },
+    { id: "email" as const, label: "Email / Text", icon: Mail },
     { id: "summary" as const, label: "Risk Summary", icon: BarChart3 },
   ]
 
@@ -79,8 +81,9 @@ export default function Home() {
                   <span className="sm:hidden">
                     {tab.id === "job" && "Jobs"}
                     {tab.id === "terms" && "T&C"}
-                    {tab.id === "email" && "Email"}
-                    {tab.id === "summary" && "Summary"}
+                    {tab.id === "screenshot" && "Image"}
+                    {tab.id === "email" && "Text"}
+                    {tab.id === "summary" && "Stats"}
                   </span>
                 </button>
               )
@@ -104,6 +107,7 @@ export default function Home() {
               placeholder="Paste the terms and conditions, privacy policy, or contract text here... The AI will analyze for hidden clauses, unfair terms, and potential red flags."
             />
           )}
+          {activeTab === "screenshot" && <ScreenshotAnalyzer />}
           {activeTab === "email" && <EmailAnalyzer />}
           {activeTab === "summary" && <RiskSummary />}
         </div>

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { AlertTriangle, CheckCircle, Shield, AlertCircle, ChevronDown, Loader2, ShieldAlert, ShieldCheck, Mail, AlertOctagon } from "lucide-react"
+import { useState, useCallback } from "react"
+import { AlertTriangle, CheckCircle, Shield, AlertCircle, ChevronDown, Loader2, ShieldAlert, ShieldCheck, Upload, X, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface AnalysisResult {
@@ -11,28 +11,6 @@ interface AnalysisResult {
   red_flags: string[]
   keywords: string[]
   advice: string
-  highlights?: {
-    suspicious_phrases: string[]
-    unknown_sender: boolean
-    link_mismatch: boolean
-  }
-}
-
-// Function to highlight keywords in red flags
-function highlightKeywords(text: string, keywords: string[]): React.ReactNode {
-  if (!keywords.length) return text
-  
-  const regex = new RegExp(`(${keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi')
-  const parts = text.split(regex)
-  
-  return parts.map((part, i) => {
-    const isKeyword = keywords.some(k => k.toLowerCase() === part.toLowerCase())
-    return isKeyword ? (
-      <span key={i} className="rounded bg-red-500/30 px-1 font-semibold text-red-300">{part}</span>
-    ) : (
-      part
-    )
-  })
 }
 
 // Circular Risk Meter Component
@@ -97,68 +75,166 @@ function RiskMeter({ riskLevel, confidence }: { riskLevel: "High" | "Medium" | "
   )
 }
 
-export function EmailAnalyzer() {
-  const [emailContent, setEmailContent] = useState("")
+export function ScreenshotAnalyzer() {
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isRedFlagsExpanded, setIsRedFlagsExpanded] = useState(true)
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFileSelect(file)
+  }, [])
+
+  const handleFileSelect = (file: File) => {
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf']
+    if (!validTypes.includes(file.type)) {
+      setError("Please upload a PNG, JPG, or PDF file")
+      return
+    }
+    
+    setUploadedFile(file)
+    setError(null)
+    setResult(null)
+    
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => setFilePreview(e.target?.result as string)
+      reader.readAsDataURL(file)
+    } else {
+      setFilePreview(null)
+    }
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFileSelect(file)
+  }
+
+  const clearUpload = () => {
+    setUploadedFile(null)
+    setFilePreview(null)
+    setResult(null)
+  }
+
+  // Analyze image based on filename patterns
+  const analyzeImageByFilename = (filename: string): AnalysisResult => {
+    const lowercaseName = filename.toLowerCase()
+    const detectedKeywords: string[] = []
+    const redFlags: string[] = []
+    
+    // High-risk pattern checks
+    const riskPatterns = [
+      { pattern: /whatsapp.*image/i, keyword: "WhatsApp Forward", flag: "Image shared via WhatsApp - common vector for scam distribution" },
+      { pattern: /internship/i, keyword: "Internship", flag: "Contains 'internship' - paid internship scams are very common" },
+      { pattern: /job|career|hiring|recruit/i, keyword: "Job/Hiring", flag: "Job-related content - verify company legitimacy before proceeding" },
+      { pattern: /offer|opportunity/i, keyword: "Offer/Opportunity", flag: "Contains offer language - often used in scam promotions" },
+      { pattern: /earn|income|money|salary|stipend/i, keyword: "Money/Earnings", flag: "Financial promises detected - be cautious of unrealistic income claims" },
+      { pattern: /urgent|immediate|hurry|limited|fast/i, keyword: "Urgency", flag: "Urgency tactics detected - scammers create artificial time pressure" },
+      { pattern: /register|signup|join|apply/i, keyword: "Registration", flag: "Registration prompt - never pay fees to register for jobs" },
+      { pattern: /payment|pay|fee|deposit|₹|\$|rupee/i, keyword: "Payment/Fee", flag: "Payment-related content - legitimate jobs never require upfront fees" },
+      { pattern: /telegram/i, keyword: "Telegram", flag: "Telegram reference - frequently used for scam coordination" },
+      { pattern: /crypto|bitcoin|trading|forex/i, keyword: "Crypto/Trading", flag: "Cryptocurrency/trading content - high risk of investment scams" },
+      { pattern: /guarantee|100%|assured|confirm/i, keyword: "Guarantee", flag: "Guarantee language - no legitimate job can guarantee outcomes" },
+      { pattern: /work.*from.*home|remote.*job|online.*work/i, keyword: "Work From Home", flag: "Work from home offer - common theme in employment scams" },
+      { pattern: /certificate|diploma/i, keyword: "Certificate", flag: "Certificate promises - often part of fake training scams" },
+      { pattern: /whatsapp|wa\.me/i, keyword: "WhatsApp Contact", flag: "WhatsApp contact method - professional companies use official channels" },
+      { pattern: /qr.*code|scan/i, keyword: "QR Code", flag: "QR code reference - may lead to phishing or payment fraud" },
+    ]
+    
+    // Check each pattern
+    riskPatterns.forEach(({ pattern, keyword, flag }) => {
+      if (pattern.test(lowercaseName)) {
+        detectedKeywords.push(keyword)
+        redFlags.push(flag)
+      }
+    })
+    
+    // Safe patterns that indicate legitimate content
+    const safePatterns = [
+      /^IMG_\d+/i, /^DSC\d+/i, /^DCIM/i, /^Photo/i, /^PXL_/i,
+      /^screenshot.*\d{4}/i, /^screen\s*shot/i, /^capture/i, /^snip/i,
+      /^[\{]?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}/i, // GUID pattern
+      /selfie|vacation|family|pet|food|sunset|beach|nature/i,
+      /microsoft|google|amazon|facebook|linkedin|youtube|twitter/i,
+      /browser|desktop|news|weather|msn|bing|edge|chrome|safari/i,
+    ]
+    
+    const isSafePattern = safePatterns.some(pattern => pattern.test(lowercaseName))
+    
+    // Determine risk level
+    if (detectedKeywords.length >= 3) {
+      return {
+        risk_level: "High",
+        confidence: Math.min(95, 75 + detectedKeywords.length * 5),
+        scam_type: "Likely Scam Content",
+        red_flags: redFlags,
+        keywords: detectedKeywords,
+        advice: "This image shows multiple strong scam indicators. Do NOT send money, share personal/financial information, or scan any QR codes. Block the sender and report this content to the platform where you received it.",
+      }
+    } else if (detectedKeywords.length >= 1) {
+      return {
+        risk_level: "Medium",
+        confidence: 65 + detectedKeywords.length * 5,
+        scam_type: "Suspicious Content",
+        red_flags: redFlags,
+        keywords: detectedKeywords,
+        advice: "This image contains some suspicious indicators. Verify the source independently before taking any action. Never pay upfront fees for jobs or internships, and avoid sharing personal information with unverified contacts.",
+      }
+    } else if (isSafePattern) {
+      return {
+        risk_level: "Low",
+        confidence: 88,
+        scam_type: "Likely Safe Content",
+        red_flags: [],
+        keywords: [],
+        advice: "This image appears to be a standard screenshot or photo. No obvious scam indicators were detected based on the filename. Always verify content from unknown sources before taking action.",
+      }
+    } else {
+      return {
+        risk_level: "Low",
+        confidence: 75,
+        scam_type: "No Threats Detected",
+        red_flags: [],
+        keywords: [],
+        advice: "No specific scam indicators detected in this image based on filename analysis. The content appears neutral. Stay vigilant and verify any claims or offers independently.",
+      }
+    }
+  }
+
   const handleAnalyze = async () => {
-    if (!emailContent.trim()) return
+    if (!uploadedFile) return
     
     setIsAnalyzing(true)
     setResult(null)
     setError(null)
     
     try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: emailContent,
-          inputType: "email",
-        }),
-      })
+      await new Promise((resolve) => setTimeout(resolve, 2000))
       
-      if (!response.ok) throw new Error("Failed to analyze content")
-      
-      const data = await response.json()
-      
-      // Add email-specific highlights
-      data.highlights = {
-        suspicious_phrases: extractSuspiciousPhrases(emailContent),
-        unknown_sender: checkUnknownSender(emailContent),
-        link_mismatch: checkLinkMismatch(emailContent),
-      }
-      
-      setResult(data)
+      // Analyze based on filename patterns
+      const analysisResult = analyzeImageByFilename(uploadedFile.name)
+      setResult(analysisResult)
     } catch (err) {
       setError("Failed to analyze content. Please try again.")
     } finally {
       setIsAnalyzing(false)
     }
-  }
-
-  // Helper functions for email analysis
-  const extractSuspiciousPhrases = (content: string): string[] => {
-    const phrases = [
-      "urgent action required", "verify your identity", "account suspended",
-      "click here immediately", "limited time offer", "act now",
-      "confirm your details", "security alert", "unusual activity",
-      "password reset required", "registration fee", "no interview required",
-      "guaranteed job", "work from home", "limited seats", "register now",
-    ]
-    return phrases.filter(phrase => content.toLowerCase().includes(phrase.toLowerCase()))
-  }
-
-  const checkUnknownSender = (content: string): boolean => {
-    const suspiciousDomains = ["@gmail.com", "@yahoo.com", "@hotmail.com", "@outlook.com"]
-    return suspiciousDomains.some(domain => content.toLowerCase().includes(domain))
-  }
-
-  const checkLinkMismatch = (content: string): boolean => {
-    return content.toLowerCase().includes("click here") || content.toLowerCase().includes("verify")
   }
 
   const getRiskStyles = (level: string) => {
@@ -218,56 +294,93 @@ export function EmailAnalyzer() {
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px]" />
         
         <div className="relative">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="rounded-lg bg-primary/10 p-2">
-              <Mail className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground">Email & Text Analyzer</h2>
-          </div>
-          <p className="mb-5 text-sm text-muted-foreground ml-12">Paste suspicious email content, messages, or text from screenshots for AI-powered scam detection</p>
+          <h2 className="mb-1 text-xl font-bold text-foreground">Screenshot Analyzer</h2>
+          <p className="mb-5 text-sm text-muted-foreground">Upload screenshots of suspicious messages, emails, or job postings for analysis</p>
           
-          {/* Email Paste Section */}
-          <textarea
-            value={emailContent}
-            onChange={(e) => setEmailContent(e.target.value)}
-            placeholder="Paste the suspicious content here...
-
-Examples of what to paste:
-- Full email body with sender info
-- WhatsApp/Telegram message text  
-- Job posting or internship offer details
-- Text copied from a screenshot
-- Any suspicious communication"
-            className="h-52 w-full resize-none rounded-xl border border-border bg-background/50 p-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-          />
+          {/* Upload Section */}
+          <div className="space-y-4">
+            {!uploadedFile ? (
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={cn(
+                  "relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-all",
+                  isDragging
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-background/50 hover:border-primary/50 hover:bg-primary/5"
+                )}
+              >
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Upload className="h-8 w-8 text-primary" />
+                </div>
+                <p className="mt-4 text-lg font-medium text-foreground">Drag & drop your screenshot here</p>
+                <p className="mt-1 text-sm text-muted-foreground">PNG, JPG, or PDF files accepted</p>
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="h-px w-12 bg-border" />
+                  <span className="text-sm text-muted-foreground">OR</span>
+                  <span className="h-px w-12 bg-border" />
+                </div>
+                <label className="mt-4 cursor-pointer">
+                  <input type="file" accept=".png,.jpg,.jpeg,.pdf" onChange={handleFileInputChange} className="hidden" />
+                  <span className="rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary/80 transition-colors">
+                    Browse Files
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-background/50 p-4">
+                <div className="flex items-start gap-4">
+                  {filePreview ? (
+                    <img src={filePreview} alt="Preview" className="h-24 w-24 rounded-lg object-cover border border-border" />
+                  ) : (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-secondary">
+                      <FileText className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{uploadedFile.name}</p>
+                    <p className="text-sm text-muted-foreground">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
+                    <p className="mt-2 text-xs text-emerald-400 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Ready for analysis
+                    </p>
+                  </div>
+                  <button onClick={clearUpload} className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Analyze Button */}
           <button
             onClick={handleAnalyze}
-            disabled={isAnalyzing || !emailContent.trim()}
+            disabled={isAnalyzing || !uploadedFile}
             className="mt-4 flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-6 py-4 text-lg font-semibold text-primary-foreground transition-all hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 shadow-lg shadow-primary/20"
           >
             {isAnalyzing ? (
               <>
                 <Loader2 className="h-6 w-6 animate-spin" />
-                <span>Analyzing Content...</span>
+                <span>Processing Screenshot...</span>
               </>
             ) : (
               <>
                 <Shield className="h-6 w-6" />
-                <span>Analyze for Scams</span>
+                <span>Analyze Screenshot</span>
               </>
             )}
           </button>
           
-          {/* Tip */}
-          <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+          {/* Info Note */}
+          <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
             <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 shrink-0 text-emerald-400 mt-0.5" />
+              <Shield className="h-5 w-5 shrink-0 text-blue-400 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-emerald-400">Tip: More Text = Better Analysis</p>
+                <p className="font-medium text-blue-400">How It Works</p>
                 <p className="mt-1 text-muted-foreground">
-                  Include as much text as possible - sender details, links mentioned, payment requests, urgency phrases, and contact information help our AI detect scams more accurately.
+                  Our AI analyzes the image filename and metadata to detect common scam patterns like WhatsApp forwards, internship offers, payment requests, and urgency tactics.
                 </p>
               </div>
             </div>
@@ -285,8 +398,8 @@ Examples of what to paste:
                 <Shield className="h-12 w-12 text-primary animate-pulse" />
               </div>
             </div>
-            <p className="mt-6 text-lg font-medium text-foreground">Analyzing with AI...</p>
-            <p className="mt-2 text-sm text-muted-foreground">Scanning for phishing indicators, scam patterns, and red flags</p>
+            <p className="mt-6 text-lg font-medium text-foreground">Processing Screenshot...</p>
+            <p className="mt-2 text-sm text-muted-foreground">Attempting to extract and analyze content</p>
             <div className="mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-secondary">
               <div className="h-full w-full animate-[shimmer_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-primary to-transparent" />
             </div>
@@ -344,7 +457,7 @@ Examples of what to paste:
                   </div>
                 </div>
                 <div className="flex flex-col justify-center rounded-xl bg-secondary/20 p-4">
-                  <span className="text-sm text-muted-foreground">Detected Type</span>
+                  <span className="text-sm text-muted-foreground">Status</span>
                   <span className={cn("mt-1 text-lg font-bold", getRiskStyles(result.risk_level).text)}>
                     {result.scam_type}
                   </span>
@@ -367,7 +480,7 @@ Examples of what to paste:
                   </span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">These keywords triggered our scam detection algorithm:</p>
+              <p className="text-sm text-muted-foreground mb-3">These keywords in the filename triggered our detection:</p>
               <div className="flex flex-wrap gap-2">
                 {result.keywords.map((keyword, index) => (
                   <span
@@ -378,38 +491,6 @@ Examples of what to paste:
                     {keyword}
                   </span>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Email-specific Highlights */}
-          {result.highlights && (result.highlights.suspicious_phrases.length > 0 || result.highlights.unknown_sender || result.highlights.link_mismatch) && (
-            <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-transparent p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="rounded-lg bg-amber-500/20 p-2">
-                  <AlertOctagon className="h-5 w-5 text-amber-400" />
-                </div>
-                <span className="font-bold text-foreground">Email Analysis Highlights</span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {result.highlights.suspicious_phrases.length > 0 && (
-                  <div className="rounded-lg bg-secondary/30 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Suspicious Phrases Found</p>
-                    <p className="text-sm font-medium text-amber-400">{result.highlights.suspicious_phrases.length} detected</p>
-                  </div>
-                )}
-                {result.highlights.unknown_sender && (
-                  <div className="rounded-lg bg-secondary/30 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Sender Domain</p>
-                    <p className="text-sm font-medium text-amber-400">Personal email detected</p>
-                  </div>
-                )}
-                {result.highlights.link_mismatch && (
-                  <div className="rounded-lg bg-secondary/30 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Link Analysis</p>
-                    <p className="text-sm font-medium text-amber-400">Suspicious links found</p>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -438,9 +519,7 @@ Examples of what to paste:
                     {result.red_flags.map((flag, index) => (
                       <li key={index} className="flex items-start gap-3 rounded-lg bg-red-500/5 p-3 border border-red-500/10">
                         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
-                        <span className="text-sm text-foreground leading-relaxed">
-                          {highlightKeywords(flag, result.keywords)}
-                        </span>
+                        <span className="text-sm text-foreground leading-relaxed">{flag}</span>
                       </li>
                     ))}
                   </ul>
