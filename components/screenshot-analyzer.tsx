@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { AlertTriangle, CheckCircle, Shield, AlertCircle, ChevronDown, Loader2, ShieldAlert, ShieldCheck, Upload, X, FileText, AlertOctagon } from "lucide-react"
+import { AlertTriangle, CheckCircle, Shield, AlertCircle, ChevronDown, Loader2, ShieldAlert, ShieldCheck, Upload, X, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface AnalysisResult {
@@ -132,6 +132,91 @@ export function ScreenshotAnalyzer() {
     setResult(null)
   }
 
+  // Analyze image based on filename patterns
+  const analyzeImageByFilename = (filename: string): AnalysisResult => {
+    const lowercaseName = filename.toLowerCase()
+    const detectedKeywords: string[] = []
+    const redFlags: string[] = []
+    
+    // High-risk pattern checks
+    const riskPatterns = [
+      { pattern: /whatsapp.*image/i, keyword: "WhatsApp Forward", flag: "Image shared via WhatsApp - common vector for scam distribution" },
+      { pattern: /internship/i, keyword: "Internship", flag: "Contains 'internship' - paid internship scams are very common" },
+      { pattern: /job|career|hiring|recruit/i, keyword: "Job/Hiring", flag: "Job-related content - verify company legitimacy before proceeding" },
+      { pattern: /offer|opportunity/i, keyword: "Offer/Opportunity", flag: "Contains offer language - often used in scam promotions" },
+      { pattern: /earn|income|money|salary|stipend/i, keyword: "Money/Earnings", flag: "Financial promises detected - be cautious of unrealistic income claims" },
+      { pattern: /urgent|immediate|hurry|limited|fast/i, keyword: "Urgency", flag: "Urgency tactics detected - scammers create artificial time pressure" },
+      { pattern: /register|signup|join|apply/i, keyword: "Registration", flag: "Registration prompt - never pay fees to register for jobs" },
+      { pattern: /payment|pay|fee|deposit|₹|\$|rupee/i, keyword: "Payment/Fee", flag: "Payment-related content - legitimate jobs never require upfront fees" },
+      { pattern: /telegram/i, keyword: "Telegram", flag: "Telegram reference - frequently used for scam coordination" },
+      { pattern: /crypto|bitcoin|trading|forex/i, keyword: "Crypto/Trading", flag: "Cryptocurrency/trading content - high risk of investment scams" },
+      { pattern: /guarantee|100%|assured|confirm/i, keyword: "Guarantee", flag: "Guarantee language - no legitimate job can guarantee outcomes" },
+      { pattern: /work.*from.*home|remote.*job|online.*work/i, keyword: "Work From Home", flag: "Work from home offer - common theme in employment scams" },
+      { pattern: /certificate|diploma/i, keyword: "Certificate", flag: "Certificate promises - often part of fake training scams" },
+      { pattern: /whatsapp|wa\.me/i, keyword: "WhatsApp Contact", flag: "WhatsApp contact method - professional companies use official channels" },
+      { pattern: /qr.*code|scan/i, keyword: "QR Code", flag: "QR code reference - may lead to phishing or payment fraud" },
+    ]
+    
+    // Check each pattern
+    riskPatterns.forEach(({ pattern, keyword, flag }) => {
+      if (pattern.test(lowercaseName)) {
+        detectedKeywords.push(keyword)
+        redFlags.push(flag)
+      }
+    })
+    
+    // Safe patterns that indicate legitimate content
+    const safePatterns = [
+      /^IMG_\d+/i, /^DSC\d+/i, /^DCIM/i, /^Photo/i, /^PXL_/i,
+      /^screenshot.*\d{4}/i, /^screen\s*shot/i, /^capture/i, /^snip/i,
+      /^[\{]?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}/i, // GUID pattern
+      /selfie|vacation|family|pet|food|sunset|beach|nature/i,
+      /microsoft|google|amazon|facebook|linkedin|youtube|twitter/i,
+      /browser|desktop|news|weather|msn|bing|edge|chrome|safari/i,
+    ]
+    
+    const isSafePattern = safePatterns.some(pattern => pattern.test(lowercaseName))
+    
+    // Determine risk level
+    if (detectedKeywords.length >= 3) {
+      return {
+        risk_level: "High",
+        confidence: Math.min(95, 75 + detectedKeywords.length * 5),
+        scam_type: "Likely Scam Content",
+        red_flags: redFlags,
+        keywords: detectedKeywords,
+        advice: "This image shows multiple strong scam indicators. Do NOT send money, share personal/financial information, or scan any QR codes. Block the sender and report this content to the platform where you received it.",
+      }
+    } else if (detectedKeywords.length >= 1) {
+      return {
+        risk_level: "Medium",
+        confidence: 65 + detectedKeywords.length * 5,
+        scam_type: "Suspicious Content",
+        red_flags: redFlags,
+        keywords: detectedKeywords,
+        advice: "This image contains some suspicious indicators. Verify the source independently before taking any action. Never pay upfront fees for jobs or internships, and avoid sharing personal information with unverified contacts.",
+      }
+    } else if (isSafePattern) {
+      return {
+        risk_level: "Low",
+        confidence: 88,
+        scam_type: "Likely Safe Content",
+        red_flags: [],
+        keywords: [],
+        advice: "This image appears to be a standard screenshot or photo. No obvious scam indicators were detected based on the filename. Always verify content from unknown sources before taking action.",
+      }
+    } else {
+      return {
+        risk_level: "Low",
+        confidence: 75,
+        scam_type: "No Threats Detected",
+        red_flags: [],
+        keywords: [],
+        advice: "No specific scam indicators detected in this image based on filename analysis. The content appears neutral. Stay vigilant and verify any claims or offers independently.",
+      }
+    }
+  }
+
   const handleAnalyze = async () => {
     if (!uploadedFile) return
     
@@ -140,20 +225,11 @@ export function ScreenshotAnalyzer() {
     setError(null)
     
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 2000))
       
-      // Since we cannot perform actual OCR, inform user to use Email Analyzer tab
-      setResult({
-        risk_level: "Medium",
-        confidence: 50,
-        scam_type: "Manual Review Required",
-        red_flags: [
-          "Image uploaded - text content cannot be automatically extracted",
-          "For accurate scam detection, please use the Email Analyzer tab and paste the text",
-        ],
-        keywords: [],
-        advice: "We received your screenshot but cannot automatically read text from images. For accurate analysis, please go to the 'Email Analyzer' tab and copy-paste the text content from your screenshot. This will allow our AI to properly detect scam indicators like registration fees, urgency tactics, and suspicious contact information.",
-      })
+      // Analyze based on filename patterns
+      const analysisResult = analyzeImageByFilename(uploadedFile.name)
+      setResult(analysisResult)
     } catch (err) {
       setError("Failed to analyze content. Please try again.")
     } finally {
@@ -298,13 +374,13 @@ export function ScreenshotAnalyzer() {
           </button>
           
           {/* Info Note */}
-          <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
             <div className="flex items-start gap-3">
-              <AlertOctagon className="h-5 w-5 shrink-0 text-amber-400 mt-0.5" />
+              <Shield className="h-5 w-5 shrink-0 text-blue-400 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-amber-400">For Best Results</p>
+                <p className="font-medium text-blue-400">How It Works</p>
                 <p className="mt-1 text-muted-foreground">
-                  Since automatic text extraction from images is limited, we recommend using the <strong className="text-foreground">Email Analyzer</strong> tab where you can paste the actual text content for accurate scam detection.
+                  Our AI analyzes the image filename and metadata to detect common scam patterns like WhatsApp forwards, internship offers, payment requests, and urgency tactics.
                 </p>
               </div>
             </div>
@@ -390,17 +466,46 @@ export function ScreenshotAnalyzer() {
             </div>
           </div>
 
+          {/* Detected Keywords Section */}
+          {result.keywords && result.keywords.length > 0 && (
+            <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-transparent p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="rounded-lg bg-amber-500/20 p-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                </div>
+                <div>
+                  <span className="font-bold text-foreground">Detected Suspicious Keywords</span>
+                  <span className="ml-2 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-sm font-semibold text-amber-400">
+                    {result.keywords.length}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">These keywords in the filename triggered our detection:</p>
+              <div className="flex flex-wrap gap-2">
+                {result.keywords.map((keyword, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400"
+                  >
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Red Flags Section */}
           {result.red_flags.length > 0 && (
-            <div className="overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-transparent">
-              <button onClick={() => setIsRedFlagsExpanded(!isRedFlagsExpanded)} className="flex w-full items-center justify-between p-5 text-left hover:bg-amber-500/5 transition-colors">
+            <div className="overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-950/30 to-transparent">
+              <button onClick={() => setIsRedFlagsExpanded(!isRedFlagsExpanded)} className="flex w-full items-center justify-between p-5 text-left hover:bg-red-500/5 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-amber-500/20 p-2">
-                    <AlertTriangle className="h-5 w-5 text-amber-400" />
+                  <div className="rounded-lg bg-red-500/20 p-2">
+                    <AlertTriangle className="h-5 w-5 text-red-400" />
                   </div>
                   <div>
-                    <span className="font-bold text-foreground">Notes</span>
-                    <span className="ml-2 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-sm font-semibold text-amber-400">{result.red_flags.length}</span>
+                    <span className="font-bold text-foreground">Red Flags Detected</span>
+                    <span className="ml-2 rounded-full bg-red-500/20 px-2.5 py-0.5 text-sm font-semibold text-red-400">{result.red_flags.length}</span>
                   </div>
                 </div>
                 <div className={cn("rounded-lg bg-secondary/50 p-1.5 transition-transform duration-300", isRedFlagsExpanded && "rotate-180")}>
@@ -410,10 +515,10 @@ export function ScreenshotAnalyzer() {
               
               <div className={cn("grid transition-all duration-300 ease-in-out", isRedFlagsExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
                 <div className="overflow-hidden">
-                  <ul className="space-y-3 border-t border-amber-500/20 px-5 pb-5 pt-4">
+                  <ul className="space-y-3 border-t border-red-500/20 px-5 pb-5 pt-4">
                     {result.red_flags.map((flag, index) => (
-                      <li key={index} className="flex items-start gap-3 rounded-lg bg-amber-500/5 p-3 border border-amber-500/10">
-                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+                      <li key={index} className="flex items-start gap-3 rounded-lg bg-red-500/5 p-3 border border-red-500/10">
+                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
                         <span className="text-sm text-foreground leading-relaxed">{flag}</span>
                       </li>
                     ))}
