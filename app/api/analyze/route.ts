@@ -14,107 +14,101 @@ const scamIndicators = {
   high: {
     patterns: [
       // Payment/Fee related - CRITICAL RED FLAGS (legitimate employers NEVER ask for money)
+      // These patterns specifically detect when YOU are asked to PAY money
       { regex: /upfront (payment|fee|deposit)/i, keyword: "upfront payment", weight: 30 },
       { regex: /send (money|payment|fee)/i, keyword: "send money", weight: 30 },
-      { regex: /pay.{0,20}(fee|charge|amount|deposit)/i, keyword: "payment required", weight: 30 },
-      { regex: /(fee|charge|payment|deposit).{0,20}(₹|rs\.?|inr|rupee|\$|usd)/i, keyword: "money demand", weight: 30 },
-      { regex: /(₹|rs\.?|inr)\s*[\d,]+/i, keyword: "rupee amount", weight: 25 },
-      { regex: /(onboarding|activation|joining|enrollment|registration|processing|training|security)\s*(fee|charge|cost|deposit|payment)/i, keyword: "hidden fees", weight: 30 },
-      { regex: /(fee|charge|cost|deposit|payment)\s*of\s*(₹|rs\.?|\$|inr)/i, keyword: "explicit fee demand", weight: 30 },
-      { regex: /without\s*payment.{0,30}(cancel|expire|invalid|void|reject)/i, keyword: "payment threat", weight: 30 },
-      { regex: /(wire transfer|western union|bitcoin|crypto|upi|paytm|phonepe|gpay)/i, keyword: "suspicious payment method", weight: 25 },
+      { regex: /pay\s*(a|the|an)?\s*(fee|charge|amount|deposit|sum)/i, keyword: "payment required", weight: 30 },
+      { regex: /(fee|charge|deposit)\s*(of|is|:)?\s*(₹|rs\.?|inr|rupee|\$)/i, keyword: "fee with amount", weight: 35 },
+      { regex: /(onboarding|activation|joining|enrollment|registration|processing|training|security|refundable)\s*(fee|charge|cost|deposit|payment)/i, keyword: "hidden fees", weight: 35 },
+      { regex: /pay.{0,10}(₹|rs\.?|\$)\s*[\d,]+/i, keyword: "payment demand", weight: 35 },
+      { regex: /(₹|rs\.?|\$)\s*[\d,]+.{0,20}(fee|charge|deposit|payment|to (pay|secure|confirm|activate))/i, keyword: "explicit fee", weight: 35 },
+      { regex: /without\s*payment.{0,30}(cancel|expire|invalid|void|reject)/i, keyword: "payment threat", weight: 35 },
+      { regex: /(wire transfer|western union|bitcoin|crypto)/i, keyword: "suspicious payment method", weight: 25 },
+      { regex: /to\s*secure\s*(your)?\s*(spot|seat|position|place).{0,20}pay/i, keyword: "pay to secure", weight: 35 },
       
-      // Urgency tactics - used to prevent victims from thinking
-      { regex: /(act now|limited time|urgent|immediately|asap|right away|within \d+ (hour|day))/i, keyword: "urgency tactics", weight: 20 },
-      { regex: /(immediate|instant)\s*(confirmation|action|response|payment)/i, keyword: "pressure tactics", weight: 20 },
+      // Urgency tactics - used to prevent victims from thinking  
+      { regex: /(immediate|instant)\s*(confirmation|action|response|payment)\s*needed/i, keyword: "pressure tactics", weight: 20 },
       { regex: /(will be|automatically)\s*(cancel|expire|void|reject|invalid)/i, keyword: "cancellation threat", weight: 20 },
-      { regex: /(last chance|final notice|expire|deadline)/i, keyword: "artificial deadline", weight: 15 },
       
       // Too good to be true
       { regex: /\$\d{3,}\/?(week|day|hour)/i, keyword: "unrealistic pay", weight: 20 },
-      { regex: /(guaranteed|100%|assured|confirm).{0,20}(job|offer|placement|success)/i, keyword: "guaranteed job", weight: 20 },
-      { regex: /(no interview|skip interview|direct (hire|joining|offer))/i, keyword: "no interview required", weight: 20 },
-      { regex: /(no experience|freshers?|anyone can)/i, keyword: "unrealistic promises", weight: 15 },
+      { regex: /(guaranteed|100%|assured).{0,20}(job|offer|placement)/i, keyword: "guaranteed job", weight: 20 },
+      { regex: /(no interview|skip interview|direct (hire|joining))\s*(required|needed)?/i, keyword: "no interview required", weight: 25 },
       
       // Sensitive information requests
-      { regex: /(ssn|social security|bank account|routing number|aadhar|pan card)/i, keyword: "sensitive info request", weight: 20 },
+      { regex: /(ssn|social security|bank account|routing number)/i, keyword: "sensitive info request", weight: 20 },
       
-      // Offer letters with payment
-      { regex: /offer\s*letter.{0,50}(pay|fee|charge|deposit|₹|rs\.?|\$)/i, keyword: "fake offer letter", weight: 30 },
-      { regex: /(activate|verify|confirm).{0,30}(pay|fee|charge|deposit)/i, keyword: "activation fee scam", weight: 30 },
-      
-      // Contact methods
-      { regex: /@(gmail|yahoo|hotmail|outlook|rediffmail)\.com/i, keyword: "personal email domain", weight: 10 },
-      { regex: /(whatsapp|telegram).{0,20}(\+?\d{10,})/i, keyword: "unofficial contact", weight: 15 },
-      
-      // Other red flags
-      { regex: /(click here|click this link|click below)/i, keyword: "suspicious link", weight: 10 },
-      { regex: /(congratulations|you have been selected|you won|shortlisted)/i, keyword: "unsolicited selection", weight: 15 },
-      { regex: /(work from home|remote).{0,30}(₹|rs\.?|\$)\s*\d{4,}/i, keyword: "suspicious remote offer", weight: 15 },
+      // Contact methods combined with payment
+      { regex: /(whatsapp|telegram).{0,30}(pay|fee|charge|deposit|₹|rs\.?|\$)/i, keyword: "payment via chat", weight: 25 },
     ],
     scamTypes: ["Advance Fee Scam", "Job Scam", "Internship Scam", "Phishing Attempt", "Fake Offer Letter Scam", "Employment Fraud"],
   },
   medium: {
     patterns: [
-      { regex: /(vague|flexible|various)/i, keyword: "vague description", weight: 8 },
       { regex: /(interview via (chat|text|whatsapp|telegram))/i, keyword: "informal interview", weight: 10 },
-      { regex: /(no experience|entry level).{0,30}(₹|rs\.?|\$)\s*\d{3,}/i, keyword: "suspicious salary", weight: 12 },
-      { regex: /(contact us|reach out|message).{0,20}@(gmail|yahoo)/i, keyword: "unprofessional contact", weight: 8 },
-      { regex: /(limited positions|few spots|exclusive|only \d+ seats)/i, keyword: "artificial scarcity", weight: 10 },
-      { regex: /(stipend|salary).{0,20}(₹|rs\.?)\s*\d{4,}/i, keyword: "stipend mentioned", weight: 5 },
-      { regex: /(certificate|certification).{0,20}(guaranteed|assured|free)/i, keyword: "certificate promise", weight: 8 },
+      { regex: /(limited positions|few spots|only \d+ seats)/i, keyword: "artificial scarcity", weight: 10 },
+      { regex: /(certificate|certification).{0,20}(guaranteed|assured)/i, keyword: "certificate promise", weight: 8 },
+      { regex: /@(gmail|yahoo|hotmail)\.com/i, keyword: "personal email", weight: 5 },
     ],
     scamTypes: ["Potential Phishing", "Suspicious Offer", "Unverified Opportunity"],
   },
 }
 
+// Positive indicators that REDUCE suspicion (legitimate offer signs)
+const legitimateIndicators = [
+  { regex: /no\s*(payment|fee|charge).{0,20}(required|needed|at any stage)/i, weight: -30 },
+  { regex: /stipend\s*:\s*(₹|rs\.?)\s*[\d,]+\s*\/?\s*(month|per month)/i, weight: -15 },
+  { regex: /salary\s*:\s*(₹|rs\.?)\s*[\d,]+/i, weight: -15 },
+  { regex: /(working hours|work hours|office hours)/i, weight: -5 },
+  { regex: /(interview|selection)\s*(round|process|scheduled)/i, weight: -10 },
+  { regex: /please\s*(confirm|reply).{0,30}(before|by)\s*\d/i, weight: -5 },
+  { regex: /(pvt\.?\s*ltd|private limited|llp|inc\.|corporation)/i, weight: -5 },
+  { regex: /your\s*responsibilities/i, weight: -5 },
+]
+
 // Red flag message templates
 const redFlagTemplates: Record<string, string> = {
-  // Payment related - CRITICAL
+  // Payment related - CRITICAL (only when YOU are asked to pay)
   "upfront payment": "CRITICAL: Requests upfront payment - legitimate employers NEVER ask for money",
   "send money": "CRITICAL: Asks you to send money - this is a major scam indicator",
   "payment required": "CRITICAL: Demands payment to proceed - legitimate jobs don't require payment",
-  "money demand": "CRITICAL: Mentions specific money amount - never pay for job opportunities",
-  "rupee amount": "CRITICAL: Specifies rupee payment amount - employment should not cost money",
+  "fee with amount": "CRITICAL: Specifies a fee amount - never pay for job opportunities",
   "hidden fees": "CRITICAL: Mentions fees (onboarding/registration/training) - these are scam tactics",
-  "explicit fee demand": "CRITICAL: Explicitly demands a fee payment - 100% scam indicator",
+  "payment demand": "CRITICAL: Demands payment of a specific amount - 100% scam indicator",
+  "explicit fee": "CRITICAL: Explicitly mentions fee/charge amount - this is fraud",
   "payment threat": "CRITICAL: Threatens cancellation without payment - classic extortion tactic",
-  "suspicious payment method": "Mentions informal payment methods (UPI, crypto, wire transfer)",
-  "fake offer letter": "CRITICAL: Offer letter mentions payment - legitimate offers never require fees",
-  "activation fee scam": "CRITICAL: Asks for activation/verification fee - this is fraud",
+  "suspicious payment method": "Mentions suspicious payment methods (crypto, wire transfer)",
+  "pay to secure": "CRITICAL: Asks payment to secure position - legitimate jobs never do this",
+  "payment via chat": "CRITICAL: Requests payment via WhatsApp/Telegram - major scam indicator",
   
   // Urgency related
-  "urgency tactics": "Uses urgency tactics ('act now', 'immediately') to pressure quick decisions",
   "pressure tactics": "Creates pressure with 'immediate confirmation' demands",
   "cancellation threat": "Threatens automatic cancellation to force quick action",
-  "artificial deadline": "Creates artificial deadline to prevent you from verifying",
   
   // Too good to be true
   "unrealistic pay": "Offers unrealistic salary that is too good to be true",
   "guaranteed job": "Promises guaranteed job/placement - no legitimate company can guarantee this",
   "no interview required": "Claims no interview needed - legitimate jobs always interview candidates",
-  "unrealistic promises": "Makes unrealistic promises (no experience needed for high pay)",
-  "unsolicited selection": "Claims you were 'selected' without applying - classic scam opening",
   
   // Other red flags
-  "sensitive info request": "Requests sensitive personal information (SSN, Aadhar, bank details) early",
-  "suspicious remote offer": "Suspicious work from home offer with unusually high pay",
-  "personal email domain": "Uses personal email (Gmail/Yahoo) instead of corporate email",
-  "unofficial contact": "Uses WhatsApp/Telegram for official communication - unprofessional",
-  "suspicious link": "Contains suspicious links that could be phishing attempts",
-  "vague description": "Contains vague or unclear job responsibilities",
+  "sensitive info request": "Requests sensitive personal information (SSN, bank details) early",
   "informal interview": "Conducts interviews through informal channels (WhatsApp, text)",
-  "suspicious salary": "Entry-level position with suspiciously high salary",
-  "unprofessional contact": "Uses unprofessional contact methods",
   "artificial scarcity": "Creates artificial scarcity ('limited seats') to pressure applicants",
-  "stipend mentioned": "Mentions stipend amount - verify company legitimacy before proceeding",
   "certificate promise": "Promises guaranteed certificate - may be part of training scam",
+  "personal email": "Uses personal email (Gmail/Yahoo) - verify company legitimacy",
 }
 
 function analyzeContent(content: string, inputType: "text" | "url"): AnalysisResult {
   const detectedKeywords: string[] = []
   const redFlags: string[] = []
   let totalScore = 0
+
+  // FIRST: Check for legitimate indicators (these REDUCE the score)
+  for (const indicator of legitimateIndicators) {
+    if (indicator.regex.test(content)) {
+      totalScore += indicator.weight // weight is negative, so this reduces score
+    }
+  }
 
   // Check high-risk patterns
   for (const indicator of scamIndicators.high.patterns) {
