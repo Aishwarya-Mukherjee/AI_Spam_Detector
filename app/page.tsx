@@ -12,31 +12,16 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { useAuth, validatePassword } from "@/contexts/auth-context"
+import { useAuth, validatePassword, EmailAlreadyRegisteredException, InvalidCredentialsException } from "@/contexts/auth-context"
 
 type Tab = "job" | "terms" | "screenshot" | "email" | "summary"
+type AuthMode = "signup" | "signin"
 
-function SignUpPage() {
+function SignUpPage({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [emailChecked, setEmailChecked] = useState(false)
-  const [isEmailRegistered, setIsEmailRegistered] = useState(false)
   const [formData, setFormData] = useState({ name: "", email: "", password: "" })
-  const { signUp, signIn, isEmailRegistered: checkEmail } = useAuth()
-  const isMobile = useIsMobile()
-
-  const handleEmailCheck = (email: string) => {
-    if (!email.includes("@")) {
-      setError("Please enter a valid email")
-      setEmailChecked(false)
-      return
-    }
-    
-    setError("")
-    const exists = checkEmail(email)
-    setIsEmailRegistered(exists)
-    setEmailChecked(true)
-  }
+  const { signUp } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,108 +29,28 @@ function SignUpPage() {
     setIsLoading(true)
 
     try {
-      if (isEmailRegistered) {
-        signIn(formData.email, formData.password)
-      } else {
-        signUp(formData.name, formData.email, formData.password)
-      }
+      signUp(formData.name, formData.email, formData.password)
       setFormData({ name: "", email: "", password: "" })
-      setEmailChecked(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed")
+      if (err instanceof EmailAlreadyRegisteredException) {
+        setError(err.message)
+      } else {
+        setError(err instanceof Error ? err.message : "Sign up failed")
+      }
     } finally {
       setIsLoading(false)
     }
   }
 
-  // If email not checked, show email check form
-  if (!emailChecked) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(128,128,128,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(128,128,128,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
-        
-        {/* Top right theme toggle */}
-        <div className="absolute top-4 right-4">
-          <ThemeToggle />
-        </div>
-
-        <div className="w-full max-w-md relative z-10">
-          {/* Hero Section */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 animate-pulse rounded-xl bg-primary/10 blur-md" />
-                <div className="relative rounded-xl bg-primary/5 p-3 ring-1 ring-primary/20">
-                  <Shield className="h-10 w-10 text-primary" />
-                </div>
-              </div>
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground mb-3">FraudX</h1>
-            <p className="text-muted-foreground">
-              AI-powered risk intelligence for job postings, T&Cs, emails, and more
-            </p>
-          </div>
-
-          {/* Email Check Card */}
-          <div className="rounded-2xl border border-primary/20 bg-card/50 backdrop-blur-sm p-8 shadow-xl">
-            <h2 className="text-2xl font-semibold text-foreground mb-6">Welcome</h2>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleEmailCheck(formData.email) }} className="space-y-4">
-              {/* Email Field */}
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <MailIcon className="h-4 w-4 text-primary" />
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="h-10"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-600 dark:text-red-400">
-                  {error}
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-10 text-base font-semibold"
-              >
-                {isLoading ? "Checking..." : "Continue"}
-              </Button>
-            </form>
-
-            <p className="text-xs text-muted-foreground text-center mt-4">
-              We'll check if this email is registered
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Email is checked, show sign up or sign in form
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(128,128,128,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(128,128,128,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
       
-      {/* Top right theme toggle */}
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        {/* Hero Section */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <div className="relative">
@@ -161,51 +66,42 @@ function SignUpPage() {
           </p>
         </div>
 
-        {/* Sign Up/In Card */}
         <div className="rounded-2xl border border-primary/20 bg-card/50 backdrop-blur-sm p-8 shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-foreground">
-              {isEmailRegistered ? "Sign In" : "Get Started"}
-            </h2>
-            <button
-              onClick={() => {
-                setEmailChecked(false)
-                setFormData({ name: "", email: "", password: "" })
-                setError("")
-              }}
-              className="text-sm text-primary hover:text-primary/80 transition-colors font-medium"
-            >
-              Change Email
-            </button>
-          </div>
+          <h2 className="text-2xl font-semibold text-foreground mb-6">Get Started</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email Display */}
-            <div className="rounded-lg bg-secondary/50 p-3 flex items-center gap-2">
-              <MailIcon className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="text-sm font-medium text-foreground break-all">{formData.email}</span>
+            <div className="space-y-2">
+              <label htmlFor="name" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" />
+                Full Name
+              </label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Enter your full name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="h-10"
+                disabled={isLoading}
+              />
             </div>
 
-            {/* Name Field (only for sign up) */}
-            {!isEmailRegistered && (
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
-                  Full Name
-                </label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="h-10"
-                  disabled={isLoading}
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <MailIcon className="h-4 w-4 text-primary" />
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="h-10"
+                disabled={isLoading}
+              />
+            </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Lock className="h-4 w-4 text-primary" />
@@ -214,59 +110,211 @@ function SignUpPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder={isEmailRegistered ? "Enter your password" : "Create a strong password"}
+                placeholder="Create a strong password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="h-10"
                 disabled={isLoading}
               />
-              {!isEmailRegistered && (
-                <div className="space-y-2 mt-3">
-                  <div className="text-xs font-semibold text-muted-foreground">Password requirements:</div>
-                  <ul className="space-y-1.5">
-                    {[
-                      { regex: /.{8,}/, label: "At least 8 characters" },
-                      { regex: /[A-Z]/, label: "At least 1 uppercase letter" },
-                      { regex: /[0-9]/, label: "At least 1 number" },
-                      { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, label: "At least 1 special character" },
-                    ].map((req, index) => {
-                      const isMet = req.regex.test(formData.password)
-                      return (
-                        <li key={index} className={cn("flex items-center gap-2 text-xs transition-colors", isMet ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
-                          {isMet ? (
-                            <Check className="h-4 w-4 flex-shrink-0" />
-                          ) : (
-                            <div className="w-1 h-1 rounded-full bg-current mt-1" />
-                          )}
-                          <span>{req.label}</span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              )}
+              <div className="space-y-2 mt-3">
+                <div className="text-xs font-semibold text-muted-foreground">Password requirements:</div>
+                <ul className="space-y-1.5">
+                  {[
+                    { regex: /.{8,}/, label: "At least 8 characters" },
+                    { regex: /[A-Z]/, label: "At least 1 uppercase letter" },
+                    { regex: /[0-9]/, label: "At least 1 number" },
+                    { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, label: "At least 1 special character" },
+                  ].map((req, index) => {
+                    const isMet = req.regex.test(formData.password)
+                    return (
+                      <li key={index} className={cn("flex items-center gap-2 text-xs transition-colors", isMet ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                        {isMet ? (
+                          <Check className="h-4 w-4 flex-shrink-0" />
+                        ) : (
+                          <div className="w-1 h-1 rounded-full bg-current mt-1" />
+                        )}
+                        <span>{req.label}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-600 dark:text-red-400">
-                {error}
+                <p className="font-medium mb-2">{error}</p>
+                {error.includes("already registered") && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={onSwitchToSignIn}
+                    className="h-auto p-0 text-red-600 dark:text-red-400 underline justify-start"
+                  >
+                    Click here to sign in instead →
+                  </Button>
+                )}
               </div>
             )}
 
-            {/* Submit Button */}
             <Button
               type="submit"
               disabled={isLoading}
               className="w-full h-10 text-base font-semibold"
             >
-              {isLoading ? (isEmailRegistered ? "Signing in..." : "Signing up...") : (isEmailRegistered ? "Sign In" : "Sign Up")}
+              {isLoading ? "Signing up..." : "Sign Up"}
             </Button>
           </form>
 
+          <div className="mt-6 pt-6 border-t border-border/50 text-center">
+            <p className="text-sm text-muted-foreground mb-3">
+              Already have an account?
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onSwitchToSignIn}
+              className="w-full h-10"
+            >
+              Sign In Instead
+            </Button>
+          </div>
+
           <p className="text-xs text-muted-foreground text-center mt-4">
-            {isEmailRegistered ? "Welcome back! Sign in to your account" : "By signing up, you agree to our Terms of Service"}
+            By signing up, you agree to our Terms of Service
           </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SignInPage({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [formData, setFormData] = useState({ email: "", password: "" })
+  const { signIn, isEmailRegistered } = useAuth()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    try {
+      if (!isEmailRegistered(formData.email)) {
+        throw new InvalidCredentialsException("Email not found. Please sign up instead.")
+      }
+      signIn(formData.email, formData.password)
+      setFormData({ email: "", password: "" })
+    } catch (err) {
+      if (err instanceof InvalidCredentialsException) {
+        setError(err.message)
+      } else {
+        setError(err instanceof Error ? err.message : "Sign in failed")
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(128,128,128,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(128,128,128,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
+      
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 animate-pulse rounded-xl bg-primary/10 blur-md" />
+              <div className="relative rounded-xl bg-primary/5 p-3 ring-1 ring-primary/20">
+                <Shield className="h-10 w-10 text-primary" />
+              </div>
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground mb-3">FraudX</h1>
+          <p className="text-muted-foreground">
+            AI-powered risk intelligence for job postings, T&Cs, emails, and more
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-primary/20 bg-card/50 backdrop-blur-sm p-8 shadow-xl">
+          <h2 className="text-2xl font-semibold text-foreground mb-6">Welcome Back</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="signin-email" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <MailIcon className="h-4 w-4 text-primary" />
+                Email
+              </label>
+              <Input
+                id="signin-email"
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="h-10"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="signin-password" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Lock className="h-4 w-4 text-primary" />
+                Password
+              </label>
+              <Input
+                id="signin-password"
+                type="password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="h-10"
+                disabled={isLoading}
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-600 dark:text-red-400">
+                <p className="font-medium mb-2">{error}</p>
+                {error.includes("not found") && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={onSwitchToSignUp}
+                    className="h-auto p-0 text-red-600 dark:text-red-400 underline justify-start"
+                  >
+                    Click here to create an account →
+                  </Button>
+                )}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-10 text-base font-semibold"
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-border/50 text-center">
+            <p className="text-sm text-muted-foreground mb-3">
+              Don't have an account?
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onSwitchToSignUp}
+              className="w-full h-10"
+            >
+              Sign Up Instead
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -291,7 +339,6 @@ function DashboardPage() {
     <div className="min-h-screen bg-background">
       <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(128,128,128,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(128,128,128,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
 
-      {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
@@ -374,7 +421,6 @@ function DashboardPage() {
         </div>
       </header>
 
-      {/* Tab Navigation */}
       {!isMobile && (
         <nav className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -404,7 +450,6 @@ function DashboardPage() {
         </nav>
       )}
 
-      {/* Main Content */}
       <main className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="animate-in fade-in duration-300">
           {activeTab === "job" && (
@@ -425,7 +470,6 @@ function DashboardPage() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border/50 bg-card/20 py-6 mt-8">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex flex-col items-center gap-3 text-center">
@@ -445,6 +489,15 @@ function DashboardPage() {
 
 export default function Home() {
   const { isSignedUp } = useAuth()
+  const [authMode, setAuthMode] = useState<AuthMode>("signup")
 
-  return isSignedUp ? <DashboardPage /> : <SignUpPage />
+  if (isSignedUp) {
+    return <DashboardPage />
+  }
+
+  return authMode === "signup" ? (
+    <SignUpPage onSwitchToSignIn={() => setAuthMode("signin")} />
+  ) : (
+    <SignInPage onSwitchToSignUp={() => setAuthMode("signup")} />
+  )
 }
