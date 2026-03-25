@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu } from "lucide-react"
+import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu, Lock, Mail as MailIcon, User } from "lucide-react"
 import { ScamAnalyzer } from "@/components/scam-analyzer"
 import { RiskSummary } from "@/components/risk-summary"
 import { EmailAnalyzer } from "@/components/email-analyzer"
@@ -9,13 +9,147 @@ import { ScreenshotAnalyzer } from "@/components/screenshot-analyzer"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/auth-context"
 
 type Tab = "job" | "terms" | "screenshot" | "email" | "summary"
 
-export default function Home() {
+function SignUpPage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [formData, setFormData] = useState({ name: "", email: "", password: "" })
+  const { signUp } = useAuth()
+  const isMobile = useIsMobile()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    try {
+      signUp(formData.name, formData.email, formData.password)
+      setFormData({ name: "", email: "", password: "" })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign up failed")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(128,128,128,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(128,128,128,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
+      
+      {/* Top right theme toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Hero Section */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 animate-pulse rounded-xl bg-primary/10 blur-md" />
+              <div className="relative rounded-xl bg-primary/5 p-3 ring-1 ring-primary/20">
+                <Shield className="h-10 w-10 text-primary" />
+              </div>
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground mb-3">FraudX</h1>
+          <p className="text-muted-foreground">
+            AI-powered risk intelligence for job postings, T&Cs, emails, and more
+          </p>
+        </div>
+
+        {/* Sign Up Card */}
+        <div className="rounded-2xl border border-primary/20 bg-card/50 backdrop-blur-sm p-8 shadow-xl">
+          <h2 className="text-2xl font-semibold text-foreground mb-6">Get Started</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name Field */}
+            <div className="space-y-2">
+              <label htmlFor="name" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" />
+                Full Name
+              </label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Enter your full name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="h-10"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <MailIcon className="h-4 w-4 text-primary" />
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="h-10"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Lock className="h-4 w-4 text-primary" />
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Minimum 6 characters"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="h-10"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-600 dark:text-red-400">
+                {error}
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-10 text-base font-semibold"
+            >
+              {isLoading ? "Signing up..." : "Sign Up"}
+            </Button>
+          </form>
+
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            By signing up, you agree to our Terms of Service
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DashboardPage() {
   const [activeTab, setActiveTab] = useState<Tab>("job")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { user, logout } = useAuth()
   const isMobile = useIsMobile()
 
   const tabs = [
@@ -90,10 +224,24 @@ export default function Home() {
                         </button>
                       )
                     })}
+                    <div className="mt-4 border-t border-border/50 pt-4">
+                      <button
+                        onClick={logout}
+                        className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      >
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 </SheetContent>
               </Sheet>
             )}
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{user?.name}</span>
+              <Button variant="ghost" size="sm" onClick={logout}>
+                Logout
+              </Button>
+            </div>
             <ThemeToggle />
           </div>
         </div>
@@ -166,4 +314,10 @@ export default function Home() {
       </footer>
     </div>
   )
+}
+
+export default function Home() {
+  const { isSignedUp } = useAuth()
+
+  return isSignedUp ? <DashboardPage /> : <SignUpPage />
 }
