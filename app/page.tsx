@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu, Lock, Mail as MailIcon, User, Check } from "lucide-react"
+import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu, Lock, Mail as MailIcon, User, Check, Eye, EyeOff } from "lucide-react"
 import { ScamAnalyzer } from "@/components/scam-analyzer"
 import { RiskSummary } from "@/components/risk-summary"
 import { EmailAnalyzer } from "@/components/email-analyzer"
@@ -20,6 +20,7 @@ type AuthMode = "signup" | "signin"
 function SignUpPage({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({ name: "", email: "", password: "" })
   const { signUp } = useAuth()
 
@@ -107,15 +108,25 @@ function SignUpPage({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
                 <Lock className="h-4 w-4 text-primary" />
                 Password
               </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Create a strong password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="h-10"
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create a strong password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="h-10 pr-10"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
               <div className="space-y-2 mt-3">
                 <div className="text-xs font-semibold text-muted-foreground">Password requirements:</div>
                 <ul className="space-y-1.5">
@@ -192,6 +203,7 @@ function SignUpPage({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
 function SignInPage({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({ email: "", password: "" })
   const { signIn, isEmailRegistered } = useAuth()
 
@@ -266,15 +278,25 @@ function SignInPage({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
                 <Lock className="h-4 w-4 text-primary" />
                 Password
               </label>
-              <Input
-                id="signin-password"
-                type="password"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="h-10"
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="signin-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="h-10 pr-10"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
 
             {error && (
