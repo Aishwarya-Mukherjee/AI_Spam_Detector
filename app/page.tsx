@@ -15,45 +15,44 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("job")
 
   const tabs = [
-    { id: "job" as const, label: "Job / Internship", icon: Briefcase },
-    { id: "terms" as const, label: "T&C Analyzer", icon: FileText },
-    { id: "screenshot" as const, label: "Screenshot", icon: ImageIcon },
-    { id: "email" as const, label: "Email / Text", icon: Mail },
-    { id: "summary" as const, label: "Risk Summary", icon: BarChart3 },
+    { id: "job" as const, label: "Job / Internship", shortLabel: "Jobs", icon: Briefcase },
+    { id: "terms" as const, label: "T&C Analyzer", shortLabel: "T&C", icon: FileText },
+    { id: "screenshot" as const, label: "Screenshot", shortLabel: "Image", icon: ImageIcon },
+    { id: "email" as const, label: "Email / Text", shortLabel: "Email", icon: Mail },
+    { id: "summary" as const, label: "Risk Summary", shortLabel: "Stats", icon: BarChart3 },
   ]
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Background grid pattern */}
-      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:48px_48px]" />
-      
+      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(128,128,128,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(128,128,128,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="absolute inset-0 animate-pulse rounded-xl bg-primary/20 blur-md" />
-              <div className="relative rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 p-2.5 ring-1 ring-primary/30">
-                <Shield className="h-7 w-7 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
+              <div className="absolute inset-0 animate-pulse rounded-xl bg-primary/10 blur-md" />
+              <div className="relative rounded-xl bg-primary/5 p-2.5 ring-1 ring-primary/20">
+                <Shield className="h-6 w-6 text-primary" />
               </div>
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
                 Scam Ecosystem Analyzer
               </h1>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+              <p className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
                 <Cpu className="h-3 w-3" />
-                AI-powered risk intelligence
+                Pattern-based risk intelligence
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 sm:flex">
-              <span className="relative flex h-2.5 w-2.5">
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 sm:flex">
+              <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <span className="text-sm font-medium text-emerald-400">System Active</span>
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Active</span>
             </div>
             <ThemeToggle />
           </div>
@@ -61,9 +60,9 @@ export default function Home() {
       </header>
 
       {/* Tab Navigation */}
-      <nav className="relative border-b border-border/50 bg-card/50 backdrop-blur-sm">
+      <nav className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex gap-1 overflow-x-auto py-3 scrollbar-hide">
+          <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
             {tabs.map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
@@ -72,21 +71,15 @@ export default function Home() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "relative flex shrink-0 items-center gap-2.5 rounded-xl px-5 py-3 text-sm font-medium transition-all",
+                    "relative flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all sm:px-4 sm:py-2.5",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      ? "bg-primary text-primary-foreground shadow-md"
                       : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
                   )}
                 >
-                  <Icon className={cn("h-4 w-4", isActive && "drop-shadow-[0_0_4px_rgba(255,255,255,0.5)]")} />
+                  <Icon className="h-4 w-4 shrink-0" />
                   <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">
-                    {tab.id === "job" && "Jobs"}
-                    {tab.id === "terms" && "T&C"}
-                    {tab.id === "screenshot" && "Image"}
-                    {tab.id === "email" && "Text"}
-                    {tab.id === "summary" && "Stats"}
-                  </span>
+                  <span className="sm:hidden">{tab.shortLabel}</span>
                 </button>
               )
             })}
@@ -95,7 +88,7 @@ export default function Home() {
       </nav>
 
       {/* Main Content */}
-      <main className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <main className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="animate-in fade-in duration-300">
           {activeTab === "job" && (
             <ScamAnalyzer
@@ -106,7 +99,7 @@ export default function Home() {
           {activeTab === "terms" && (
             <ScamAnalyzer
               title="Terms & Conditions Analysis"
-              placeholder="Paste the terms and conditions, privacy policy, or contract text here... The AI will analyze for hidden clauses, unfair terms, and potential red flags."
+              placeholder="Paste the terms and conditions, privacy policy, or contract text here... The analyzer will scan for hidden clauses, unfair terms, and potential red flags."
             />
           )}
           {activeTab === "screenshot" && <ScreenshotAnalyzer />}
@@ -116,19 +109,15 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="relative mt-auto border-t border-border/50 bg-card/30 py-8">
+      <footer className="border-t border-border/50 bg-card/20 py-6 mt-8">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex flex-col items-center gap-3 text-center">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-foreground">Scam Ecosystem Analyzer</span>
             </div>
-            <p className="max-w-md text-sm text-muted-foreground">
-              AI-powered threat detection to protect you from scams. 
-              Always verify information independently before making decisions.
-            </p>
-            <p className="text-xs text-muted-foreground/60">
-              Built for cybersecurity professionals and everyday users
+            <p className="max-w-md text-xs text-muted-foreground">
+              Pattern-based threat detection. Always verify information independently before making decisions.
             </p>
           </div>
         </div>

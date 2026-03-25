@@ -18,75 +18,56 @@ interface AnalysisResult {
   }
 }
 
-// Function to highlight keywords in red flags
 function highlightKeywords(text: string, keywords: string[]): React.ReactNode {
   if (!keywords.length) return text
-  
   const regex = new RegExp(`(${keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi')
   const parts = text.split(regex)
-  
   return parts.map((part, i) => {
     const isKeyword = keywords.some(k => k.toLowerCase() === part.toLowerCase())
     return isKeyword ? (
-      <span key={i} className="rounded bg-red-500/30 px-1 font-semibold text-red-300">{part}</span>
-    ) : (
-      part
-    )
+      <span key={i} className="rounded bg-red-500/20 px-0.5 font-semibold text-red-600 dark:text-red-400">{part}</span>
+    ) : part
   })
 }
 
-// Circular Risk Meter Component
 function RiskMeter({ riskLevel, confidence }: { riskLevel: "High" | "Medium" | "Low"; confidence: number }) {
   const radius = 40
   const circumference = 2 * Math.PI * radius
-  
+
   const getRiskValue = () => {
     switch (riskLevel) {
-      case "High":
-        return Math.min(100, 80 + (confidence * 0.2))
-      case "Medium":
-        return 40 + (confidence * 0.2)
-      case "Low":
-        return Math.max(5, 20 - (confidence * 0.15))
-      default:
-        return 50
+      case "High": return Math.min(100, 80 + (confidence * 0.2))
+      case "Medium": return 40 + (confidence * 0.2)
+      case "Low": return Math.max(5, 20 - (confidence * 0.15))
+      default: return 50
     }
   }
-  
+
   const displayValue = Math.round(getRiskValue())
   const progress = (displayValue / 100) * circumference
-  
+
   const getColor = () => {
     switch (riskLevel) {
-      case "High":
-        return { stroke: "#ef4444", bg: "rgba(239, 68, 68, 0.2)" }
-      case "Medium":
-        return { stroke: "#f59e0b", bg: "rgba(245, 158, 11, 0.2)" }
-      case "Low":
-        return { stroke: "#10b981", bg: "rgba(16, 185, 129, 0.2)" }
-      default:
-        return { stroke: "#6b7280", bg: "rgba(107, 114, 128, 0.2)" }
+      case "High": return { stroke: "#ef4444", bg: "rgba(239, 68, 68, 0.15)" }
+      case "Medium": return { stroke: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" }
+      case "Low": return { stroke: "#10b981", bg: "rgba(16, 185, 129, 0.15)" }
+      default: return { stroke: "#6b7280", bg: "rgba(107, 114, 128, 0.15)" }
     }
   }
-  
+
   const colors = getColor()
-  
+
   return (
     <div className="relative flex items-center justify-center">
       <svg width="100" height="100" className="transform -rotate-90">
         <circle cx="50" cy="50" r={radius} stroke={colors.bg} strokeWidth="8" fill="none" />
         <circle
-          cx="50"
-          cy="50"
-          r={radius}
-          stroke={colors.stroke}
-          strokeWidth="8"
-          fill="none"
+          cx="50" cy="50" r={radius}
+          stroke={colors.stroke} strokeWidth="8" fill="none"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference - progress}
           className="transition-all duration-1000 ease-out"
-          style={{ filter: `drop-shadow(0 0 8px ${colors.stroke})` }}
         />
       </svg>
       <div className="absolute flex flex-col items-center">
@@ -106,41 +87,30 @@ export function EmailAnalyzer() {
 
   const handleAnalyze = async () => {
     if (!emailContent.trim()) return
-    
     setIsAnalyzing(true)
     setResult(null)
     setError(null)
-    
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: emailContent,
-          inputType: "email",
-        }),
+        body: JSON.stringify({ content: emailContent, inputType: "email" }),
       })
-      
       if (!response.ok) throw new Error("Failed to analyze content")
-      
       const data = await response.json()
-      
-      // Add email-specific highlights
       data.highlights = {
         suspicious_phrases: extractSuspiciousPhrases(emailContent),
         unknown_sender: checkUnknownSender(emailContent),
         link_mismatch: checkLinkMismatch(emailContent),
       }
-      
       setResult(data)
-    } catch (err) {
+    } catch {
       setError("Failed to analyze content. Please try again.")
     } finally {
       setIsAnalyzing(false)
     }
   }
 
-  // Helper functions for email analysis
   const extractSuspiciousPhrases = (content: string): string[] => {
     const phrases = [
       "urgent action required", "verify your identity", "account suspended",
@@ -153,8 +123,8 @@ export function EmailAnalyzer() {
   }
 
   const checkUnknownSender = (content: string): boolean => {
-    const suspiciousDomains = ["@gmail.com", "@yahoo.com", "@hotmail.com", "@outlook.com"]
-    return suspiciousDomains.some(domain => content.toLowerCase().includes(domain))
+    return ["@gmail.com", "@yahoo.com", "@hotmail.com", "@outlook.com"]
+      .some(domain => content.toLowerCase().includes(domain))
   }
 
   const checkLinkMismatch = (content: string): boolean => {
@@ -163,60 +133,35 @@ export function EmailAnalyzer() {
 
   const getRiskStyles = (level: string) => {
     switch (level) {
-      case "High":
-        return {
-          badge: "bg-red-500 text-white shadow-lg shadow-red-500/30",
-          border: "border-red-500/50",
-          bg: "bg-gradient-to-br from-red-950/50 via-red-900/20 to-transparent",
-          text: "text-red-400",
-          glow: "shadow-[0_0_60px_-15px_rgba(239,68,68,0.5)]",
-        }
-      case "Medium":
-        return {
-          badge: "bg-amber-500 text-black shadow-lg shadow-amber-500/30",
-          border: "border-amber-500/50",
-          bg: "bg-gradient-to-br from-amber-950/50 via-amber-900/20 to-transparent",
-          text: "text-amber-400",
-          glow: "shadow-[0_0_60px_-15px_rgba(245,158,11,0.5)]",
-        }
-      case "Low":
-        return {
-          badge: "bg-emerald-500 text-black shadow-lg shadow-emerald-500/30",
-          border: "border-emerald-500/50",
-          bg: "bg-gradient-to-br from-emerald-950/50 via-emerald-900/20 to-transparent",
-          text: "text-emerald-400",
-          glow: "shadow-[0_0_60px_-15px_rgba(16,185,129,0.5)]",
-        }
-      default:
-        return { badge: "bg-muted", border: "border-border", bg: "bg-card", text: "text-muted-foreground", glow: "" }
+      case "High": return { badge: "bg-red-500 text-white", border: "border-red-500/40", bg: "bg-red-500/5", text: "text-red-500" }
+      case "Medium": return { badge: "bg-amber-500 text-black", border: "border-amber-500/40", bg: "bg-amber-500/5", text: "text-amber-500" }
+      case "Low": return { badge: "bg-emerald-500 text-black", border: "border-emerald-500/40", bg: "bg-emerald-500/5", text: "text-emerald-500" }
+      default: return { badge: "bg-muted", border: "border-border", bg: "bg-card", text: "text-muted-foreground" }
     }
   }
 
   const getRiskIcon = (level: string) => {
     switch (level) {
-      case "High":
-        return <ShieldAlert className="h-12 w-12 text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]" />
-      case "Medium":
-        return <AlertTriangle className="h-12 w-12 text-amber-400 drop-shadow-[0_0_12px_rgba(245,158,11,0.6)]" />
-      case "Low":
-        return <ShieldCheck className="h-12 w-12 text-emerald-400 drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]" />
-      default:
-        return <Shield className="h-12 w-12" />
+      case "High": return <ShieldAlert className="h-10 w-10 text-red-500" />
+      case "Medium": return <AlertTriangle className="h-10 w-10 text-amber-500" />
+      case "Low": return <ShieldCheck className="h-10 w-10 text-emerald-500" />
+      default: return <Shield className="h-10 w-10" />
     }
   }
 
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 80) return "bg-emerald-500"
-    if (confidence >= 60) return "bg-amber-500"
-    return "bg-red-500"
+  const getConfidenceBarColor = (level: string) => {
+    switch (level) {
+      case "High": return "bg-red-500"
+      case "Medium": return "bg-amber-500"
+      case "Low": return "bg-emerald-500"
+      default: return "bg-muted"
+    }
   }
 
   return (
     <div className="space-y-6">
       {/* Input Card */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-card/50 p-6 shadow-xl">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px]" />
-        
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="relative">
           <div className="flex items-center gap-3 mb-1">
             <div className="rounded-lg bg-primary/10 p-2">
@@ -224,128 +169,94 @@ export function EmailAnalyzer() {
             </div>
             <h2 className="text-xl font-bold text-foreground">Email & Text Analyzer</h2>
           </div>
-          <p className="mb-5 text-sm text-muted-foreground ml-12">Paste suspicious email content, messages, or text from screenshots for AI-powered scam detection</p>
-          
-          {/* Email Paste Section */}
+          <p className="mb-5 ml-12 text-sm text-muted-foreground">Paste suspicious emails, messages, or job offers for pattern analysis</p>
+
           <textarea
             value={emailContent}
             onChange={(e) => setEmailContent(e.target.value)}
-            placeholder="Paste the suspicious content here...
-
-Examples of what to paste:
-- Full email body with sender info
-- WhatsApp/Telegram message text  
-- Job posting or internship offer details
-- Text copied from a screenshot
-- Any suspicious communication"
-            className="h-52 w-full resize-none rounded-xl border border-border bg-background/50 p-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+            placeholder={`Paste the suspicious content here...\n\nExamples:\n• Full email body with sender info\n• WhatsApp or Telegram message text\n• Job posting or internship offer\n• Text copied from a screenshot`}
+            className="h-52 w-full resize-none rounded-xl border border-border bg-background/50 p-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           />
 
-          {/* Analyze Button */}
           <button
             onClick={handleAnalyze}
             disabled={isAnalyzing || !emailContent.trim()}
-            className="mt-4 flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-6 py-4 text-lg font-semibold text-primary-foreground transition-all hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 shadow-lg shadow-primary/20"
+            className="mt-4 flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-6 py-3.5 text-base font-semibold text-primary-foreground transition-all hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
           >
             {isAnalyzing ? (
-              <>
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span>Analyzing Content...</span>
-              </>
+              <><Loader2 className="h-5 w-5 animate-spin" /><span>Analyzing...</span></>
             ) : (
-              <>
-                <Shield className="h-6 w-6" />
-                <span>Analyze for Scams</span>
-              </>
+              <><Shield className="h-5 w-5" /><span>Analyze for Scams</span></>
             )}
           </button>
-          
-          {/* Tip */}
-          <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 shrink-0 text-emerald-400 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-emerald-400">Tip: More Text = Better Analysis</p>
-                <p className="mt-1 text-muted-foreground">
-                  Include as much text as possible - sender details, links mentioned, payment requests, urgency phrases, and contact information help our AI detect scams more accurately.
-                </p>
-              </div>
-            </div>
+
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+            <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Tip:</span> Include sender details, payment requests, urgency phrases, and contact info for better accuracy.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Loading State */}
+      {/* Loading */}
       {isAnalyzing && (
-        <div className="animate-in fade-in duration-300">
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-12">
-            <div className="relative">
-              <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
-              <div className="relative rounded-full bg-primary/10 p-6">
-                <Shield className="h-12 w-12 text-primary animate-pulse" />
-              </div>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-12">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 animate-ping rounded-full bg-primary/10" />
+            <div className="relative rounded-full bg-primary/10 p-5">
+              <Shield className="h-10 w-10 text-primary animate-pulse" />
             </div>
-            <p className="mt-6 text-lg font-medium text-foreground">Analyzing with AI...</p>
-            <p className="mt-2 text-sm text-muted-foreground">Scanning for phishing indicators, scam patterns, and red flags</p>
-            <div className="mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-secondary">
-              <div className="h-full w-full animate-[shimmer_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-primary to-transparent" />
-            </div>
+          </div>
+          <p className="text-base font-medium text-foreground">Analyzing content...</p>
+          <p className="mt-1 text-sm text-muted-foreground">Scanning for phishing indicators and scam patterns</p>
+          <div className="mt-5 h-1 w-40 overflow-hidden rounded-full bg-secondary">
+            <div className="h-full w-full animate-[shimmer_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-primary to-transparent" />
           </div>
         </div>
       )}
 
-      {/* Error State */}
+      {/* Error */}
       {error && !isAnalyzing && (
-        <div className="animate-in fade-in duration-300">
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-red-500/30 bg-red-950/20 p-8">
-            <div className="rounded-full bg-red-500/20 p-4">
-              <AlertCircle className="h-8 w-8 text-red-400" />
-            </div>
-            <p className="mt-4 text-lg font-medium text-foreground">Analysis Failed</p>
-            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-            <button onClick={handleAnalyze} className="mt-4 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/30 transition-colors">
-              Try Again
-            </button>
-          </div>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/5 p-8">
+          <AlertCircle className="h-8 w-8 text-red-500 mb-3" />
+          <p className="font-medium text-foreground">Analysis Failed</p>
+          <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+          <button onClick={handleAnalyze} className="mt-3 rounded-lg bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors">
+            Try Again
+          </button>
         </div>
       )}
 
       {/* Results */}
       {result && !isAnalyzing && (
-        <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 space-y-4">
-          {/* Main Verdict Card */}
-          <div className={cn(
-            "relative overflow-hidden rounded-2xl border-2 p-8 transition-all",
-            getRiskStyles(result.risk_level).border,
-            getRiskStyles(result.risk_level).bg,
-            getRiskStyles(result.risk_level).glow
-          )}>
-            <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 translate-x-10 -translate-y-10 rounded-full bg-gradient-to-br from-white/5 to-transparent blur-2xl" />
-            
-            <div className="relative space-y-6">
-              <div className="flex flex-col items-center text-center gap-4">
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Verdict */}
+          <div className={cn("rounded-2xl border-2 p-6", getRiskStyles(result.risk_level).border, getRiskStyles(result.risk_level).bg)}>
+            <div className="space-y-5">
+              <div className="flex flex-col items-center gap-3 text-center">
                 {getRiskIcon(result.risk_level)}
-                <span className={cn("rounded-full px-6 py-2.5 text-xl font-bold uppercase tracking-wider", getRiskStyles(result.risk_level).badge)}>
+                <span className={cn("rounded-full px-5 py-2 text-lg font-bold uppercase tracking-wider", getRiskStyles(result.risk_level).badge)}>
                   {result.risk_level} Risk
                 </span>
               </div>
-              
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="flex items-center justify-center rounded-xl bg-secondary/20 p-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="flex items-center justify-center rounded-xl bg-background/50 p-4 border border-border/50">
                   <RiskMeter riskLevel={result.risk_level} confidence={result.confidence} />
                 </div>
-                <div className="space-y-2 rounded-xl bg-secondary/20 p-4">
-                  <span className="text-sm font-medium text-muted-foreground">Confidence Level</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-foreground">{result.confidence}%</span>
-                  </div>
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-secondary/50">
-                    <div className={cn("h-full rounded-full transition-all duration-1000 ease-out", getConfidenceColor(result.confidence))} style={{ width: `${result.confidence}%` }} />
+                <div className="space-y-2 rounded-xl bg-background/50 p-4 border border-border/50">
+                  <span className="text-sm text-muted-foreground">Detection Confidence</span>
+                  <div className="text-3xl font-bold text-foreground">{result.confidence}%</div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className={cn("h-full rounded-full transition-all duration-700 ease-out", getConfidenceBarColor(result.risk_level))}
+                      style={{ width: `${result.confidence}%` }}
+                    />
                   </div>
                 </div>
-                <div className="flex flex-col justify-center rounded-xl bg-secondary/20 p-4">
+                <div className="flex flex-col justify-center rounded-xl bg-background/50 p-4 border border-border/50">
                   <span className="text-sm text-muted-foreground">Detected Type</span>
-                  <span className={cn("mt-1 text-lg font-bold", getRiskStyles(result.risk_level).text)}>
+                  <span className={cn("mt-1 text-base font-bold", getRiskStyles(result.risk_level).text)}>
                     {result.scam_type}
                   </span>
                 </div>
@@ -353,28 +264,22 @@ Examples of what to paste:
             </div>
           </div>
 
-          {/* Detected Keywords Section */}
+          {/* Keywords */}
           {result.keywords && result.keywords.length > 0 && (
-            <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-transparent p-5">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="rounded-lg bg-amber-500/20 p-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
                 </div>
-                <div>
-                  <span className="font-bold text-foreground">Detected Suspicious Keywords</span>
-                  <span className="ml-2 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-sm font-semibold text-amber-400">
-                    {result.keywords.length}
-                  </span>
-                </div>
+                <span className="font-semibold text-foreground">
+                  Suspicious Keywords Detected
+                  <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">{result.keywords.length}</span>
+                </span>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">These keywords triggered our scam detection algorithm:</p>
               <div className="flex flex-wrap gap-2">
-                {result.keywords.map((keyword, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400"
-                  >
-                    <AlertCircle className="h-3.5 w-3.5" />
+                {result.keywords.map((keyword, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400">
+                    <AlertCircle className="h-3 w-3" />
                     {keyword}
                   </span>
                 ))}
@@ -382,62 +287,61 @@ Examples of what to paste:
             </div>
           )}
 
-          {/* Email-specific Highlights */}
+          {/* Email Highlights */}
           {result.highlights && (result.highlights.suspicious_phrases.length > 0 || result.highlights.unknown_sender || result.highlights.link_mismatch) && (
-            <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-transparent p-5">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="rounded-lg bg-amber-500/20 p-2">
-                  <AlertOctagon className="h-5 w-5 text-amber-400" />
+                  <AlertOctagon className="h-4 w-4 text-amber-500" />
                 </div>
-                <span className="font-bold text-foreground">Email Analysis Highlights</span>
+                <span className="font-semibold text-foreground">Email Analysis Highlights</span>
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-3">
                 {result.highlights.suspicious_phrases.length > 0 && (
-                  <div className="rounded-lg bg-secondary/30 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Suspicious Phrases Found</p>
-                    <p className="text-sm font-medium text-amber-400">{result.highlights.suspicious_phrases.length} detected</p>
+                  <div className="rounded-lg bg-background/60 border border-border/50 p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Suspicious Phrases</p>
+                    <p className="text-sm font-medium text-amber-600 dark:text-amber-400">{result.highlights.suspicious_phrases.length} detected</p>
                   </div>
                 )}
                 {result.highlights.unknown_sender && (
-                  <div className="rounded-lg bg-secondary/30 p-3">
+                  <div className="rounded-lg bg-background/60 border border-border/50 p-3">
                     <p className="text-xs text-muted-foreground mb-1">Sender Domain</p>
-                    <p className="text-sm font-medium text-amber-400">Personal email detected</p>
+                    <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Personal email detected</p>
                   </div>
                 )}
                 {result.highlights.link_mismatch && (
-                  <div className="rounded-lg bg-secondary/30 p-3">
+                  <div className="rounded-lg bg-background/60 border border-border/50 p-3">
                     <p className="text-xs text-muted-foreground mb-1">Link Analysis</p>
-                    <p className="text-sm font-medium text-amber-400">Suspicious links found</p>
+                    <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Suspicious links found</p>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Red Flags Section */}
+          {/* Red Flags */}
           {result.red_flags.length > 0 && (
-            <div className="overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-950/30 to-transparent">
+            <div className="overflow-hidden rounded-2xl border border-red-500/30 bg-red-500/5">
               <button onClick={() => setIsRedFlagsExpanded(!isRedFlagsExpanded)} className="flex w-full items-center justify-between p-5 text-left hover:bg-red-500/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-red-500/20 p-2">
-                    <AlertTriangle className="h-5 w-5 text-red-400" />
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
                   </div>
-                  <div>
-                    <span className="font-bold text-foreground">Red Flags Detected</span>
-                    <span className="ml-2 rounded-full bg-red-500/20 px-2.5 py-0.5 text-sm font-semibold text-red-400">{result.red_flags.length}</span>
-                  </div>
+                  <span className="font-semibold text-foreground">
+                    Red Flags Detected
+                    <span className="ml-2 rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">{result.red_flags.length}</span>
+                  </span>
                 </div>
-                <div className={cn("rounded-lg bg-secondary/50 p-1.5 transition-transform duration-300", isRedFlagsExpanded && "rotate-180")}>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                <div className={cn("rounded-lg bg-secondary p-1.5 transition-transform duration-300", isRedFlagsExpanded && "rotate-180")}>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </div>
               </button>
-              
               <div className={cn("grid transition-all duration-300 ease-in-out", isRedFlagsExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
                 <div className="overflow-hidden">
-                  <ul className="space-y-3 border-t border-red-500/20 px-5 pb-5 pt-4">
-                    {result.red_flags.map((flag, index) => (
-                      <li key={index} className="flex items-start gap-3 rounded-lg bg-red-500/5 p-3 border border-red-500/10">
-                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+                  <ul className="space-y-2 border-t border-red-500/20 px-5 pb-5 pt-4">
+                    {result.red_flags.map((flag, i) => (
+                      <li key={i} className="flex items-start gap-3 rounded-lg bg-background/60 p-3 border border-red-500/10">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                         <span className="text-sm text-foreground leading-relaxed">
                           {highlightKeywords(flag, result.keywords)}
                         </span>
@@ -449,24 +353,18 @@ Examples of what to paste:
             </div>
           )}
 
-          {/* Advice Section */}
+          {/* Advice */}
           <div className={cn(
-            "rounded-2xl border-2 p-6",
-            result.risk_level === "Low" 
-              ? "border-emerald-500/30 bg-gradient-to-br from-emerald-950/30 to-transparent" 
-              : "border-primary/30 bg-gradient-to-br from-primary/10 to-transparent"
+            "rounded-2xl border-2 p-5",
+            result.risk_level === "Low" ? "border-emerald-500/30 bg-emerald-500/5" : "border-primary/20 bg-primary/5"
           )}>
             <div className="flex items-start gap-4">
-              <div className={cn("rounded-xl p-3", result.risk_level === "Low" ? "bg-emerald-500/20" : "bg-primary/20")}>
-                {result.risk_level === "Low" ? (
-                  <CheckCircle className="h-6 w-6 text-emerald-400" />
-                ) : (
-                  <Shield className="h-6 w-6 text-primary" />
-                )}
+              <div className={cn("rounded-xl p-2.5 shrink-0", result.risk_level === "Low" ? "bg-emerald-500/20" : "bg-primary/20")}>
+                {result.risk_level === "Low" ? <CheckCircle className="h-5 w-5 text-emerald-500" /> : <Shield className="h-5 w-5 text-primary" />}
               </div>
-              <div className="flex-1">
-                <p className="text-lg font-bold text-foreground">Recommended Action</p>
-                <p className="mt-2 text-muted-foreground leading-relaxed">{result.advice}</p>
+              <div>
+                <p className="font-semibold text-foreground mb-1">Recommended Action</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{result.advice}</p>
               </div>
             </div>
           </div>
