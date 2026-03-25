@@ -16,6 +16,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Password validation helper function
+export function validatePassword(password: string): { isValid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  if (password.length < 8) {
+    errors.push("At least 8 characters")
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("At least one uppercase letter")
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push("At least one number")
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("At least one special character")
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
 
@@ -29,14 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     // Password validation
-    if (password.length < 8) {
-      throw new Error("Password must be at least 8 characters")
-    }
-    if (!/[A-Z]/.test(password)) {
-      throw new Error("Password must contain at least one uppercase letter")
-    }
-    if (!/[0-9]/.test(password)) {
-      throw new Error("Password must contain at least one number")
+    const passwordValidation = validatePassword(password)
+    if (!passwordValidation.isValid) {
+      throw new Error(`Password requirements: ${passwordValidation.errors.join(", ")}`)
     }
 
     // Sign up the user

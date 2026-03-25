@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu, Lock, Mail as MailIcon, User } from "lucide-react"
+import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu, Lock, Mail as MailIcon, User, Check } from "lucide-react"
 import { ScamAnalyzer } from "@/components/scam-analyzer"
 import { RiskSummary } from "@/components/risk-summary"
 import { EmailAnalyzer } from "@/components/email-analyzer"
@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth, validatePassword } from "@/contexts/auth-context"
 
 type Tab = "job" | "terms" | "screenshot" | "email" | "summary"
 
@@ -112,26 +112,35 @@ function SignUpPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Min 8 chars, 1 uppercase, 1 number"
+                placeholder="Create a strong password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="h-10"
                 disabled={isLoading}
               />
-              <ul className="text-xs text-muted-foreground space-y-1 mt-2">
-                <li className={cn("flex items-center gap-2", formData.password.length >= 8 ? "text-emerald-600 dark:text-emerald-400" : "")}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                  At least 8 characters
-                </li>
-                <li className={cn("flex items-center gap-2", /[A-Z]/.test(formData.password) ? "text-emerald-600 dark:text-emerald-400" : "")}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                  At least 1 uppercase letter
-                </li>
-                <li className={cn("flex items-center gap-2", /[0-9]/.test(formData.password) ? "text-emerald-600 dark:text-emerald-400" : "")}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                  At least 1 number
-                </li>
-              </ul>
+              <div className="space-y-2 mt-3">
+                <div className="text-xs font-semibold text-muted-foreground">Password requirements:</div>
+                <ul className="space-y-1.5">
+                  {[
+                    { regex: /.{8,}/, label: "At least 8 characters" },
+                    { regex: /[A-Z]/, label: "At least 1 uppercase letter" },
+                    { regex: /[0-9]/, label: "At least 1 number" },
+                    { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, label: "At least 1 special character" },
+                  ].map((req, index) => {
+                    const isMet = req.regex.test(formData.password)
+                    return (
+                      <li key={index} className={cn("flex items-center gap-2 text-xs transition-colors", isMet ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                        {isMet ? (
+                          <Check className="h-4 w-4 flex-shrink-0" />
+                        ) : (
+                          <div className="w-1 h-1 rounded-full bg-current mt-1" />
+                        )}
+                        <span>{req.label}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
             </div>
 
             {/* Error Message */}
