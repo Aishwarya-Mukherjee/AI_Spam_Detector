@@ -6,6 +6,7 @@ import { ScamAnalyzer } from "@/components/scam-analyzer"
 import { RiskSummary } from "@/components/risk-summary"
 import { EmailAnalyzer } from "@/components/email-analyzer"
 import { ScreenshotAnalyzer } from "@/components/screenshot-analyzer"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 
 type Tab = "job" | "terms" | "screenshot" | "email" | "summary"
@@ -46,7 +47,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="hidden items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 sm:flex">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -54,6 +55,7 @@ export default function Home() {
               </span>
               <span className="text-sm font-medium text-emerald-400">System Active</span>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
