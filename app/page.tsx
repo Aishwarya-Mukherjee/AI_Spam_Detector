@@ -112,12 +112,26 @@ function SignUpPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Minimum 6 characters"
+                placeholder="Min 8 chars, 1 uppercase, 1 number"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="h-10"
                 disabled={isLoading}
               />
+              <ul className="text-xs text-muted-foreground space-y-1 mt-2">
+                <li className={cn("flex items-center gap-2", formData.password.length >= 8 ? "text-emerald-600 dark:text-emerald-400" : "")}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                  At least 8 characters
+                </li>
+                <li className={cn("flex items-center gap-2", /[A-Z]/.test(formData.password) ? "text-emerald-600 dark:text-emerald-400" : "")}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                  At least 1 uppercase letter
+                </li>
+                <li className={cn("flex items-center gap-2", /[0-9]/.test(formData.password) ? "text-emerald-600 dark:text-emerald-400" : "")}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                  At least 1 number
+                </li>
+              </ul>
             </div>
 
             {/* Error Message */}
