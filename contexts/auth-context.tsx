@@ -11,10 +11,29 @@ interface AuthContextType {
   user: AuthUser | null
   isSignedUp: boolean
   signUp: (name: string, email: string, password: string) => void
+  signIn: (email: string, password: string) => void
+  isEmailRegistered: (email: string) => boolean
   logout: () => void
 }
 
+class EmailAlreadyRegisteredException extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "EmailAlreadyRegisteredException"
+  }
+}
+
+class InvalidCredentialsException extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "InvalidCredentialsException"
+  }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+// Store registered emails (in a real app, this would be a database)
+let registeredEmails: Map<string, string> = new Map()
 
 // Password validation helper function
 export function validatePassword(password: string): { isValid: boolean; errors: string[] } {
@@ -42,6 +61,10 @@ export function validatePassword(password: string): { isValid: boolean; errors: 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
 
+  const isEmailRegistered = (email: string): boolean => {
+    return registeredEmails.has(email.toLowerCase())
+  }
+
   const signUp = (name: string, email: string, password: string) => {
     // Basic validation
     if (!name || !email || !password) {
@@ -50,6 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!email.includes("@")) {
       throw new Error("Valid email is required")
     }
+
+    // Check if email already exists
+    if (isEmailRegistered(email)) {
+      throw new EmailAlreadyRegisteredException("This email is already registered. Please sign in instead.")
+    }
     
     // Password validation
     const passwordValidation = validatePassword(password)
@@ -57,8 +85,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(`Password requirements: ${passwordValidation.errors.join(", ")}`)
     }
 
+    // Register the email and password
+    registeredEmails.set(email.toLowerCase(), password)
+
     // Sign up the user
     setUser({ name, email })
+  }
+
+  const signIn = (email: string, password: string) => {
+    // Basic validation
+    if (!email || !password) {
+      throw new Error("Email and password are required")
+    }
+
+    // Check if email exists
+    if (!isEmailRegistered(email)) {
+      throw new InvalidCredentialsException("Email not found. Please sign up instead.")
+    }
+
+    // Check password
+    const storedPassword = registeredEmails.get(email.toLowerCase())
+    if (storedPassword !== password) {
+      throw new InvalidCredentialsException("Invalid password. Please try again.")
+    }
+
+    // Sign in the user (we don't have the name, so we'll use email)
+    setUser({ name: email.split("@")[0], email })
   }
 
   const logout = () => {
@@ -66,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isSignedUp: user !== null, signUp, logout }}>
+    <AuthContext.Provider value={{ user, isSignedUp: user !== null, signUp, signIn, isEmailRegistered, logout }}>
       {children}
     </AuthContext.Provider>
   )
@@ -79,3 +131,5 @@ export function useAuth() {
   }
   return context
 }
+
+export { EmailAlreadyRegisteredException, InvalidCredentialsException }

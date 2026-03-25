@@ -19,9 +19,24 @@ type Tab = "job" | "terms" | "screenshot" | "email" | "summary"
 function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [emailChecked, setEmailChecked] = useState(false)
+  const [isEmailRegistered, setIsEmailRegistered] = useState(false)
   const [formData, setFormData] = useState({ name: "", email: "", password: "" })
-  const { signUp } = useAuth()
+  const { signUp, signIn, isEmailRegistered: checkEmail } = useAuth()
   const isMobile = useIsMobile()
+
+  const handleEmailCheck = (email: string) => {
+    if (!email.includes("@")) {
+      setError("Please enter a valid email")
+      setEmailChecked(false)
+      return
+    }
+    
+    setError("")
+    const exists = checkEmail(email)
+    setIsEmailRegistered(exists)
+    setEmailChecked(true)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,15 +44,97 @@ function SignUpPage() {
     setIsLoading(true)
 
     try {
-      signUp(formData.name, formData.email, formData.password)
+      if (isEmailRegistered) {
+        signIn(formData.email, formData.password)
+      } else {
+        signUp(formData.name, formData.email, formData.password)
+      }
       setFormData({ name: "", email: "", password: "" })
+      setEmailChecked(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign up failed")
+      setError(err instanceof Error ? err.message : "Authentication failed")
     } finally {
       setIsLoading(false)
     }
   }
 
+  // If email not checked, show email check form
+  if (!emailChecked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(128,128,128,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(128,128,128,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        
+        {/* Top right theme toggle */}
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+
+        <div className="w-full max-w-md relative z-10">
+          {/* Hero Section */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 animate-pulse rounded-xl bg-primary/10 blur-md" />
+                <div className="relative rounded-xl bg-primary/5 p-3 ring-1 ring-primary/20">
+                  <Shield className="h-10 w-10 text-primary" />
+                </div>
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground mb-3">FraudX</h1>
+            <p className="text-muted-foreground">
+              AI-powered risk intelligence for job postings, T&Cs, emails, and more
+            </p>
+          </div>
+
+          {/* Email Check Card */}
+          <div className="rounded-2xl border border-primary/20 bg-card/50 backdrop-blur-sm p-8 shadow-xl">
+            <h2 className="text-2xl font-semibold text-foreground mb-6">Welcome</h2>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleEmailCheck(formData.email) }} className="space-y-4">
+              {/* Email Field */}
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <MailIcon className="h-4 w-4 text-primary" />
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="h-10"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-600 dark:text-red-400">
+                  {error}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-10 text-base font-semibold"
+              >
+                {isLoading ? "Checking..." : "Continue"}
+              </Button>
+            </form>
+
+            <p className="text-xs text-muted-foreground text-center mt-4">
+              We'll check if this email is registered
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Email is checked, show sign up or sign in form
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(128,128,128,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(128,128,128,0.03)_1px,transparent_1px)] bg-[size:48px_48px]" />
@@ -64,44 +161,49 @@ function SignUpPage() {
           </p>
         </div>
 
-        {/* Sign Up Card */}
+        {/* Sign Up/In Card */}
         <div className="rounded-2xl border border-primary/20 bg-card/50 backdrop-blur-sm p-8 shadow-xl">
-          <h2 className="text-2xl font-semibold text-foreground mb-6">Get Started</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold text-foreground">
+              {isEmailRegistered ? "Sign In" : "Get Started"}
+            </h2>
+            <button
+              onClick={() => {
+                setEmailChecked(false)
+                setFormData({ name: "", email: "", password: "" })
+                setError("")
+              }}
+              className="text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+            >
+              Change Email
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name Field */}
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium text-foreground flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" />
-                Full Name
-              </label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Enter your full name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-10"
-                disabled={isLoading}
-              />
+            {/* Email Display */}
+            <div className="rounded-lg bg-secondary/50 p-3 flex items-center gap-2">
+              <MailIcon className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="text-sm font-medium text-foreground break-all">{formData.email}</span>
             </div>
 
-            {/* Email Field */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-foreground flex items-center gap-2">
-                <MailIcon className="h-4 w-4 text-primary" />
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-10"
-                disabled={isLoading}
-              />
-            </div>
+            {/* Name Field (only for sign up) */}
+            {!isEmailRegistered && (
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  Full Name
+                </label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="h-10"
+                  disabled={isLoading}
+                />
+              </div>
+            )}
 
             {/* Password Field */}
             <div className="space-y-2">
@@ -112,35 +214,37 @@ function SignUpPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Create a strong password"
+                placeholder={isEmailRegistered ? "Enter your password" : "Create a strong password"}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="h-10"
                 disabled={isLoading}
               />
-              <div className="space-y-2 mt-3">
-                <div className="text-xs font-semibold text-muted-foreground">Password requirements:</div>
-                <ul className="space-y-1.5">
-                  {[
-                    { regex: /.{8,}/, label: "At least 8 characters" },
-                    { regex: /[A-Z]/, label: "At least 1 uppercase letter" },
-                    { regex: /[0-9]/, label: "At least 1 number" },
-                    { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, label: "At least 1 special character" },
-                  ].map((req, index) => {
-                    const isMet = req.regex.test(formData.password)
-                    return (
-                      <li key={index} className={cn("flex items-center gap-2 text-xs transition-colors", isMet ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
-                        {isMet ? (
-                          <Check className="h-4 w-4 flex-shrink-0" />
-                        ) : (
-                          <div className="w-1 h-1 rounded-full bg-current mt-1" />
-                        )}
-                        <span>{req.label}</span>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
+              {!isEmailRegistered && (
+                <div className="space-y-2 mt-3">
+                  <div className="text-xs font-semibold text-muted-foreground">Password requirements:</div>
+                  <ul className="space-y-1.5">
+                    {[
+                      { regex: /.{8,}/, label: "At least 8 characters" },
+                      { regex: /[A-Z]/, label: "At least 1 uppercase letter" },
+                      { regex: /[0-9]/, label: "At least 1 number" },
+                      { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, label: "At least 1 special character" },
+                    ].map((req, index) => {
+                      const isMet = req.regex.test(formData.password)
+                      return (
+                        <li key={index} className={cn("flex items-center gap-2 text-xs transition-colors", isMet ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                          {isMet ? (
+                            <Check className="h-4 w-4 flex-shrink-0" />
+                          ) : (
+                            <div className="w-1 h-1 rounded-full bg-current mt-1" />
+                          )}
+                          <span>{req.label}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Error Message */}
@@ -156,12 +260,12 @@ function SignUpPage() {
               disabled={isLoading}
               className="w-full h-10 text-base font-semibold"
             >
-              {isLoading ? "Signing up..." : "Sign Up"}
+              {isLoading ? (isEmailRegistered ? "Signing in..." : "Signing up...") : (isEmailRegistered ? "Sign In" : "Sign Up")}
             </Button>
           </form>
 
           <p className="text-xs text-muted-foreground text-center mt-4">
-            By signing up, you agree to our Terms of Service
+            {isEmailRegistered ? "Welcome back! Sign in to your account" : "By signing up, you agree to our Terms of Service"}
           </p>
         </div>
       </div>
