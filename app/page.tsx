@@ -39,7 +39,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                Scam Ecosystem Analyzer
+                FraudX
               </h1>
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
                 <Cpu className="h-3 w-3" />
@@ -121,7 +121,7 @@ export default function Home() {
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">Scam Ecosystem Analyzer</span>
+              <span className="text-sm font-medium text-foreground">FraudX</span>
             </div>
             <p className="max-w-md text-sm text-muted-foreground">
               AI-powered threat detection to protect you from scams. 
