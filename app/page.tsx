@@ -1,18 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail } from "lucide-react"
+import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu } from "lucide-react"
 import { ScamAnalyzer } from "@/components/scam-analyzer"
 import { RiskSummary } from "@/components/risk-summary"
 import { EmailAnalyzer } from "@/components/email-analyzer"
 import { ScreenshotAnalyzer } from "@/components/screenshot-analyzer"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
 type Tab = "job" | "terms" | "screenshot" | "email" | "summary"
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("job")
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const isMobile = useIsMobile()
 
   const tabs = [
     { id: "job" as const, label: "Job / Internship", shortLabel: "Jobs", icon: Briefcase },
@@ -54,38 +58,76 @@ export default function Home() {
               </span>
               <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Active</span>
             </div>
+            {isMobile && (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <button className="rounded-lg p-2 text-muted-foreground hover:bg-secondary/80 hover:text-foreground transition-colors md:hidden">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Toggle menu</span>
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full max-w-xs">
+                  <div className="flex flex-col gap-4 pt-6">
+                    {tabs.map((tab) => {
+                      const Icon = tab.icon
+                      const isActive = activeTab === tab.id
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => {
+                            setActiveTab(tab.id)
+                            setMobileMenuOpen(false)
+                          }}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all",
+                            isActive
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                          )}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span>{tab.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
             <ThemeToggle />
           </div>
         </div>
       </header>
 
       {/* Tab Navigation */}
-      <nav className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
-            {tabs.map((tab) => {
-              const Icon = tab.icon
-              const isActive = activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "relative flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all sm:px-4 sm:py-2.5",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">{tab.shortLabel}</span>
-                </button>
-              )
-            })}
+      {!isMobile && (
+        <nav className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                const isActive = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "relative flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all sm:px-4 sm:py-2.5",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.shortLabel}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      )}
 
       {/* Main Content */}
       <main className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
