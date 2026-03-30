@@ -1,17 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu } from "lucide-react"
+import { Shield, Briefcase, FileText, BarChart3, Cpu, ImageIcon, Mail, Menu, Globe, Zap } from "lucide-react"
 import { ScamAnalyzer } from "@/components/scam-analyzer"
 import { RiskSummary } from "@/components/risk-summary"
 import { EmailAnalyzer } from "@/components/email-analyzer"
 import { ScreenshotAnalyzer } from "@/components/screenshot-analyzer"
+import { URLScanner } from "@/components/url-scanner"
+import { ThreatIntelDashboard } from "@/components/threat-intel-dashboard"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
-type Tab = "job" | "terms" | "screenshot" | "email" | "summary"
+type Tab = "job" | "terms" | "screenshot" | "email" | "url" | "intel" | "summary"
 
 const tabs = [
   {
@@ -37,6 +39,18 @@ const tabs = [
     label: "Email Inspector",
     shortLabel: "Email",
     icon: Mail,
+  },
+  {
+    id: "url" as const,
+    label: "URL Scanner",
+    shortLabel: "URL",
+    icon: Globe,
+  },
+  {
+    id: "intel" as const,
+    label: "Threat Intel",
+    shortLabel: "Intel",
+    icon: Zap,
   },
   {
     id: "summary" as const,
@@ -168,6 +182,8 @@ export default function Home() {
           )}
           {activeTab === "screenshot" && <ScreenshotAnalyzer />}
           {activeTab === "email" && <EmailAnalyzer />}
+          {activeTab === "url" && <URLScanner />}
+          {activeTab === "intel" && <ThreatIntelDashboard />}
           {activeTab === "summary" && <RiskSummary />}
         </div>
       </main>
