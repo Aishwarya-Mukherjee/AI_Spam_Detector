@@ -116,97 +116,30 @@ export function ScreenshotAnalyzer() {
     setResult(null)
   }
 
-  const analyzeImageByFilename = (filename: string): AnalysisResult => {
-    const lowercaseName = filename.toLowerCase()
-    const detectedKeywords: string[] = []
-    const redFlags: string[] = []
-
-    const riskPatterns = [
-      { pattern: /whatsapp.*image/i, keyword: "WhatsApp Forward", flag: "Image shared via WhatsApp — common vector for scam distribution" },
-      { pattern: /internship/i, keyword: "Internship", flag: "Contains 'internship' — paid internship scams are very common" },
-      { pattern: /job|career|hiring|recruit/i, keyword: "Job/Hiring", flag: "Job-related content — verify company legitimacy before proceeding" },
-      { pattern: /offer|opportunity/i, keyword: "Offer/Opportunity", flag: "Contains offer language — often used in scam promotions" },
-      { pattern: /earn|income|money|salary|stipend/i, keyword: "Money/Earnings", flag: "Financial promises detected — be cautious of unrealistic income claims" },
-      { pattern: /urgent|immediate|hurry|limited|fast/i, keyword: "Urgency", flag: "Urgency tactics detected — scammers create artificial time pressure" },
-      { pattern: /register|signup|join|apply/i, keyword: "Registration", flag: "Registration prompt — never pay fees to register for jobs" },
-      { pattern: /payment|pay|fee|deposit|₹|\$|rupee/i, keyword: "Payment/Fee", flag: "Payment-related content — legitimate jobs never require upfront fees" },
-      { pattern: /telegram/i, keyword: "Telegram", flag: "Telegram reference — frequently used for scam coordination" },
-      { pattern: /crypto|bitcoin|trading|forex/i, keyword: "Crypto/Trading", flag: "Cryptocurrency/trading content — high risk of investment scams" },
-      { pattern: /guarantee|100%|assured|confirm/i, keyword: "Guarantee", flag: "Guarantee language — no legitimate job can guarantee outcomes" },
-      { pattern: /work.*from.*home|remote.*job|online.*work/i, keyword: "Work From Home", flag: "Work from home offer — common theme in employment scams" },
-      { pattern: /certificate|diploma/i, keyword: "Certificate", flag: "Certificate promises — often part of fake training scams" },
-      { pattern: /whatsapp|wa\.me/i, keyword: "WhatsApp Contact", flag: "WhatsApp contact method — professional companies use official channels" },
-      { pattern: /qr.*code|scan/i, keyword: "QR Code", flag: "QR code reference — may lead to phishing or payment fraud" },
-    ]
-
-    riskPatterns.forEach(({ pattern, keyword, flag }) => {
-      if (pattern.test(lowercaseName)) {
-        detectedKeywords.push(keyword)
-        redFlags.push(flag)
-      }
-    })
-
-    const safePatterns = [
-      /^IMG_\d+/i, /^DSC\d+/i, /^DCIM/i, /^Photo/i, /^PXL_/i,
-      /^screenshot.*\d{4}/i, /^screen\s*shot/i, /^capture/i, /^snip/i,
-      /^[\{]?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}/i,
-      /selfie|vacation|family|pet|food|sunset|beach|nature/i,
-      /microsoft|google|amazon|facebook|linkedin|youtube|twitter/i,
-      /browser|desktop|news|weather|msn|bing|edge|chrome|safari/i,
-    ]
-
-    const isSafePattern = safePatterns.some(pattern => pattern.test(lowercaseName))
-
-    if (detectedKeywords.length >= 3) {
-      return {
-        risk_level: "High",
-        confidence: Math.min(95, 75 + detectedKeywords.length * 5),
-        scam_type: "Likely Scam Content",
-        red_flags: redFlags,
-        keywords: detectedKeywords,
-        advice: "This image shows multiple strong scam indicators. Do NOT send money, share personal or financial information, or scan any QR codes. Block the sender and report this content to the platform where you received it.",
-      }
-    } else if (detectedKeywords.length >= 1) {
-      return {
-        risk_level: "Medium",
-        confidence: 65 + detectedKeywords.length * 5,
-        scam_type: "Suspicious Content",
-        red_flags: redFlags,
-        keywords: detectedKeywords,
-        advice: "This image contains some suspicious indicators. Verify the source independently before taking any action. Never pay upfront fees for jobs or internships.",
-      }
-    } else if (isSafePattern) {
-      return {
-        risk_level: "Low",
-        confidence: 80,
-        scam_type: "Likely Safe Content",
-        red_flags: [],
-        keywords: [],
-        advice: "No obvious scam indicators detected based on the filename. Always verify content from unknown sources before taking action.",
-      }
-    } else {
-      return {
-        risk_level: "Low",
-        confidence: 65,
-        scam_type: "No Threats Detected",
-        red_flags: [],
-        keywords: [],
-        advice: "No specific scam indicators detected. Stay vigilant and verify any claims or offers independently.",
-      }
-    }
-  }
-
   const handleAnalyze = async () => {
     if (!uploadedFile) return
     setIsAnalyzing(true)
     setResult(null)
     setError(null)
+    
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-      const analysisResult = analyzeImageByFilename(uploadedFile.name)
-      setResult(analysisResult)
-    } catch {
-      setError("Failed to analyze content. Please try again.")
+      const formData = new FormData()
+      formData.append("file", uploadedFile)
+
+      const response = await fetch("/api/screenshot", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to analyze screenshot")
+      }
+
+      const data = await response.json()
+      setResult(data)
+    } catch (err: any) {
+      setError(err.message || "Failed to analyze content. Please try again.")
     } finally {
       setIsAnalyzing(false)
     }
@@ -309,12 +242,12 @@ export function ScreenshotAnalyzer() {
             )}
           </button>
 
-          {/* Honest info note */}
-          <div className="mt-4 flex items-start gap-3 rounded-lg border border-border bg-secondary/30 p-3.5">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          {/* AI Intelligence info note */}
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3.5">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <p className="text-sm text-muted-foreground">
-              Analysis is based on the <span className="font-medium text-foreground">filename</span> of your upload.
-              For more accurate results, copy the text from the screenshot and use the <span className="font-medium text-foreground">Email / Text</span> tab instead.
+              Powered by <span className="font-medium text-primary">Gemini Multimodal AI</span>. 
+              The AI actively reads text and analyzes visual elements within the image to detect spoofing, phishing, and scam tactics.
             </p>
           </div>
         </div>
@@ -329,8 +262,8 @@ export function ScreenshotAnalyzer() {
               <Shield className="h-10 w-10 text-primary animate-pulse" />
             </div>
           </div>
-          <p className="text-base font-medium text-foreground">Scanning filename patterns...</p>
-          <p className="mt-1 text-sm text-muted-foreground">Checking for common scam indicators</p>
+          <p className="text-base font-medium text-foreground">Extracting intelligence...</p>
+          <p className="mt-1 text-sm text-muted-foreground">Cross-referencing visual indicators with known threat signatures</p>
           <div className="mt-5 h-1 w-40 overflow-hidden rounded-full bg-secondary">
             <div className="h-full w-full animate-[shimmer_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-primary to-transparent" />
           </div>
@@ -392,7 +325,7 @@ export function ScreenshotAnalyzer() {
                   <AlertTriangle className="h-4 w-4 text-amber-500" />
                 </div>
                 <span className="font-semibold text-foreground">
-                  Suspicious Filename Keywords
+                  Suspicious Elements Identified
                   <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">{result.keywords.length}</span>
                 </span>
               </div>
