@@ -63,25 +63,54 @@ Output ONLY the raw JSON object. Do not wrap in markdown code blocks.
       model: 'gemini-2.5-flash',
       contents: [
         {
-          inlineData: {
-            data: base64Data,
-            mimeType: file.type
-          }
-        },
-        prompt
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: file.type
+              }
+            },
+            {
+              text: prompt
+            }
+          ]
+        }
       ],
-      config: {
+      generationConfig: {
         responseMimeType: 'application/json',
         temperature: 0.1
       }
     })
 
-    const resultText = response.text
+    let resultText = '';
+    if (response.candidates && response.candidates.length > 0) {
+      const content = response.candidates[0].content;
+      if (content && content.parts && content.parts.length > 0) {
+        const part = content.parts[0];
+        if ('text' in part) {
+          resultText = (part as any).text;
+        }
+      }
+    }
+
     if (!resultText) {
       throw new Error("No output text from Gemini model.")
     }
 
-    const result: AnalysisResult = JSON.parse(resultText)
+    // Extract JSON if it's wrapped in markdown code blocks
+    let jsonText = resultText.trim();
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.slice(7);
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.slice(3);
+    }
+    if (jsonText.endsWith('```')) {
+      jsonText = jsonText.slice(0, -3);
+    }
+    jsonText = jsonText.trim();
+
+    const result: AnalysisResult = JSON.parse(jsonText)
 
     return NextResponse.json(result)
   } catch (error) {

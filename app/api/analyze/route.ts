@@ -34,17 +34,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const prompt = `
-You are a top-tier cybersecurity Threat Intelligence Analyst.
+    const prompt = `You are a top-tier cybersecurity Threat Intelligence Analyst.
 Analyze the following ${inputType === "url" ? "URL" : "text context"} for potential scams, phishing, or fraud.
 Return your detailed analysis STRICTLY as a JSON object matching this TypeScript interface exactly:
 interface AnalysisResult {
   risk_level: "High" | "Medium" | "Low";
-  confidence: number; // 0 to 100 integer
-  scam_type: string; // concise name of threat type (e.g., "Advance Fee Scam", "Legitimate Offer", "Phishing")
-  red_flags: string[]; // array of specific suspicious elements found, explain why they are suspicious
-  keywords: string[]; // array of exactly matching suspicious keywords or patterns from the text
-  advice: string; // clear, actionable advice for the user based strictly on the findings
+  confidence: number;
+  scam_type: string;
+  red_flags: string[];
+  keywords: string[];
+  advice: string;
 }
 
 Output ONLY the raw JSON object. Do not wrap in markdown code blocks.
@@ -52,25 +51,55 @@ Output ONLY the raw JSON object. Do not wrap in markdown code blocks.
 Input to analyze:
 """
 ${content}
-"""
-`
+"""`
 
     // Use gemini-2.5-flash for fast and accurate processing
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            responseMimeType: 'application/json',
-            temperature: 0.1 // Keep it deterministic for threat analysis
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: prompt
+            }
+          ]
         }
+      ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.1
+      }
     });
 
-    const resultText = response.text;
+    let resultText = '';
+    if (response.candidates && response.candidates.length > 0) {
+      const content = response.candidates[0].content;
+      if (content && content.parts && content.parts.length > 0) {
+        const part = content.parts[0];
+        if ('text' in part) {
+          resultText = (part as any).text;
+        }
+      }
+    }
+
     if (!resultText) {
       throw new Error("No text returned from Gemini");
     }
 
-    const result: AnalysisResult = JSON.parse(resultText);
+    // Extract JSON if it's wrapped in markdown code blocks
+    let jsonText = resultText.trim();
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.slice(7);
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.slice(3);
+    }
+    if (jsonText.endsWith('```')) {
+      jsonText = jsonText.slice(0, -3);
+    }
+    jsonText = jsonText.trim();
+
+    const result: AnalysisResult = JSON.parse(jsonText);
 
     return NextResponse.json(result)
   } catch (error) {
